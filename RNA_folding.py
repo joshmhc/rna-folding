@@ -41,7 +41,7 @@ Possible reduction strategies for RNA folding:
 5. Merge maximal contiguous stems to a single super node, effectively reducing the problem size.
 """
 
-def merge_idle_sequence(bond_matrix, rna_sequence, min_len=10):
+def merge_idle_sequence(bond_matrix, rna_sequence, min_len=5):
     """ Merges all idle sequences of consecutive nucleotides of the same type longer than min_len to super nodes.
     
     Args:
@@ -151,7 +151,7 @@ def merge_idle_sequence(bond_matrix, rna_sequence, min_len=10):
     
     return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
 
-def merge_maximal(bond_matrix, stem_dict, target_stem=None):
+def merge_maximal(bond_matrix, stem_dict, target_stem=None, rna_sequence=None):
     """ Merges a single maximal stem to a super node, effectively reducing the problem size.
     
     Args:
@@ -163,10 +163,11 @@ def merge_maximal(bond_matrix, stem_dict, target_stem=None):
             Specific maximal stem to collapse. If None, uses the first maximal stem.
             
     Returns:
-        tuple: (reduced_matrix, position_mapping, reverse_mapping)
+        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
             - reduced_matrix: New matrix with the target stem as a super-node
             - position_mapping: Maps original positions to new positions
             - reverse_mapping: Maps new positions back to original positions
+            - modified_sequence: RNA sequence with merged stem marked differently
     """
     
     n = bond_matrix.shape[0]
@@ -254,10 +255,23 @@ def merge_maximal(bond_matrix, stem_dict, target_stem=None):
     # Add the bond between the super-nodes
     reduced_matrix[min(first_super_node, second_super_node), max(first_super_node, second_super_node)] = stem_bond_strength
     
-    return reduced_matrix, position_mapping, reverse_mapping
-
-
-
+    # Create modified sequence where merged stem positions are marked differently
+    if rna_sequence is None:
+        # If no sequence provided, return None for modified_sequence
+        modified_sequence = None
+    else:
+        # Create modified sequence where merged stem positions are marked with 'X'
+        modified_sequence = list(rna_sequence)
+        
+        # Mark all positions in the target stem with 'X'
+        for i in range(target_stem[0], target_stem[1] + 1):  # First side
+            modified_sequence[i] = 'x'
+        for i in range(target_stem[2], target_stem[3] + 1):  # Second side
+            modified_sequence[i] = 'x'
+        
+        modified_sequence = ''.join(modified_sequence)
+    
+    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
 
 def text_to_matrix(file_name, min_loop):
     """ Reads properly formatted RNA text file and returns a matrix of possible hydrogen bonding pairs.
@@ -297,7 +311,6 @@ def text_to_matrix(file_name, min_loop):
                 bond_matrix[min(bond), max(bond)] = 1
 
     return bond_matrix
-
 
 def make_stem_dict(bond_matrix, min_stem, min_loop):
     """ Takes a matrix of potential hydrogen binding pairs and returns a dictionary of possible stems.
@@ -344,6 +357,66 @@ def make_stem_dict(bond_matrix, min_stem, min_loop):
 
     return stem_dict
 
+def apply_reduction_method(bond_matrix, stem_dict, rna_sequence, method='idle_sequence', **kwargs):
+    """ Applies the specified reduction method to the RNA folding problem.
+    
+    Args:
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix.
+        stem_dict (dict):
+            Dictionary with maximal stems as keys.
+        rna_sequence (str):
+            The RNA sequence string.
+        method (str):
+            Reduction method to use. Options:
+            - 'idle_sequence': Merge consecutive same-type nucleotides
+            - 'maximal_stem': Merge the longest maximal stem
+        **kwargs:
+            Additional arguments for specific methods:
+            - For 'idle_sequence': min_len (default=10)
+            - For 'maximal_stem': target_stem (default=None)
+            
+    Returns:
+        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
+            - reduced_matrix: New matrix after reduction
+            - position_mapping: Maps original positions to new positions
+            - reverse_mapping: Maps new positions back to original positions
+            - modified_sequence: RNA sequence with merged nodes marked
+    """
+    
+    if method == 'idle_sequence':
+        min_len = kwargs.get('min_len', 5)
+        return merge_idle_sequence(bond_matrix, rna_sequence, min_len)
+    
+    elif method == 'maximal_stem':
+        target_stem = kwargs.get('target_stem', None)
+        return merge_maximal(bond_matrix, stem_dict, target_stem, rna_sequence)
+    
+    else:
+        raise ValueError(f"Unknown reduction method: {method}. Available methods: 'idle_sequence', 'maximal_stem'")
+
+def create_modified_sequence_file(modified_sequence, base_filename='modified_sequence'):
+    """ Creates a temporary file with the modified sequence for plotting purposes.
+    
+    Args:
+        modified_sequence (str):
+            The modified RNA sequence string.
+        base_filename (str):
+            Base name for the temporary file.
+            
+    Returns:
+        str: Path to the created temporary file.
+    """
+    import tempfile
+    import os
+    
+    # Create temporary file with modified sequence
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, prefix=base_filename + '_') as temp_file:
+        # Write the modified sequence in the same format as the original file
+        temp_file.write(f"0 {modified_sequence}\n")
+        temp_file_path = temp_file.name
+    
+    return temp_file_path
 
 def convert_reduced_solution_to_original(reverse_mapping, reduced_solution_stems):
     """ Converts solution stems from reduced matrix back to original matrix using reverse mapping.
@@ -415,7 +488,6 @@ def check_overlap(stem1, stem2):
 
     return False
 
-
 def pseudoknot_terms(stem_dict, min_stem=3, c=0.3):
     """ Creates a dictionary with all possible pseudoknots as keys and appropriate penalties as values.
 
@@ -444,13 +516,12 @@ def pseudoknot_terms(stem_dict, min_stem=3, c=0.3):
                             if substem1[1] < substem2[0] and substem2[1] < substem1[2] and substem1[3] < substem2[2]})
     return pseudos
 
-
-def make_plot(file, stems, fig_name='RNA_plot'):
+def make_plot(rna_sequence, stems, fig_name='RNA_plot'):
     """ Produces graph plot and saves as .png file.
 
     Args:
-        file (str):
-            Path to text file name containing RNA information.
+        rna_sequence (str):
+            RNA sequence string.
         stems (list):
             List of stems in solution, encoded as 4-tuples.
         fig_name (str):
@@ -461,9 +532,8 @@ def make_plot(file, stems, fig_name='RNA_plot'):
     plt.clf()
     plt.close('all')
 
-    # Read RNA file for length and labels.
-    with open(file) as f:
-        rna = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
+    # Use the provided RNA sequence directly
+    rna = rna_sequence.lower()
 
     # Create graph with edges from RNA sequence and stems. Nodes are temporarily labeled by integers.
     G = nx.Graph()
@@ -471,21 +541,29 @@ def make_plot(file, stems, fig_name='RNA_plot'):
     stem_edges = [(stem[0] + i, stem[3] - i) for stem in stems for i in range(stem[1] - stem[0] + 1)]
     G.add_edges_from(rna_edges + stem_edges)
 
-    # Assign each nucleotide to a color.
+    # Assign each nucleotide to a color and size.
     color_map = []
+    node_sizes = []
     for node in rna:
-        if node == 'g':
+        if node == 'x':  # Merged node
+            color_map.append('purple')  # Distinct color for merged nodes
+            node_sizes.append(400)      # Larger size for merged nodes
+        elif node == 'g':
             color_map.append('tab:red')
+            node_sizes.append(200)
         elif node == 'c':
             color_map.append('tab:green')
+            node_sizes.append(200)
         elif node == 'a':
             color_map.append('y')
+            node_sizes.append(200)
         else:
             color_map.append('tab:blue')
+            node_sizes.append(200)
 
-    options = {"edgecolors": "tab:gray", "node_size": 200, "alpha": 0.8}
-    pos = nx.spring_layout(G, iterations=5000)  # max(3000, 125 * len(rna)))
-    nx.draw_networkx_nodes(G, pos, node_color=color_map, **options)
+    options = {"edgecolors": "tab:gray", "alpha": 0.8}
+    pos = nx.spring_layout(G, iterations=5000, seed=42)  # Fixed seed for reproducible layout
+    nx.draw_networkx_nodes(G, pos, node_color=color_map, node_size=node_sizes, **options)
 
     labels = {i: rna[i].upper() for i in range(len(rna))}
     nx.draw_networkx_labels(G, pos, labels, font_size=10, font_color="whitesmoke")
@@ -496,7 +574,6 @@ def make_plot(file, stems, fig_name='RNA_plot'):
     plt.savefig(fig_name + '.png')
 
     print('\nPlot of solution saved as {}.png'.format(fig_name))
-
 
 def build_cqm(stem_dict, min_stem, c):
     """ Creates a constrained quadratic model to optimize most likely stems from a dictionary of possible stems.
@@ -542,7 +619,6 @@ def build_cqm(stem_dict, min_stem, c):
                     cqm.add_constraint(dimod.quicksum([dimod.Binary(stem) for stem in stem_pair]) <= 1)
 
     return cqm
-
 
 def process_cqm_solution(sample_set, verbose=True):
     """ Processes samples from solution and prints relevant information.
@@ -678,6 +754,9 @@ def main(path, verbose, min_stem, min_loop, c):
     Returns:
         None: None
     """
+    # Read the RNA sequence for idle sequence detection
+    with open(path) as f:
+        rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
     
     matrix = text_to_matrix(path, min_loop)
     matrix_copy = np.copy(matrix)
@@ -685,43 +764,40 @@ def main(path, verbose, min_stem, min_loop, c):
 
     print_matrix_and_stem_dict(matrix, stem_dict)
     
-    # Test the merge_maximal function
-    print("\n=== Testing merge_maximal function ===")
+    # Test the reduction methods using the helper function
+    print("\n=== Testing reduction methods ===")
     
-    """
-    # Get the first maximal stem to collapse
-    maximal_stems = list(stem_dict.keys())
-        
-    reduced_matrix, pos_mapping, reverse_mapping = merge_maximal(matrix, stem_dict, None)
-    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0])
-    """
-
-    # Test the merge_idle_sequence function
-    print("\n=== Testing merge_idle_sequence function ===")
-    # Read the RNA sequence for idle sequence detection
-    with open(path) as f:
-        rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
-    idle_reduced_matrix, idle_pos_mapping, idle_reverse_mapping, modified_sequence = merge_idle_sequence(matrix, rna_sequence, min_len=4)
-    print_reduced_matrix_info(idle_reduced_matrix, idle_pos_mapping, idle_reverse_mapping, matrix.shape[0], modified_sequence)
+    # Test idle sequence reduction
+    reduced_matrix, pos_mapping, reverse_mapping, modified_sequence = apply_reduction_method(
+        matrix, stem_dict, rna_sequence, method='idle_sequence', min_len=4
+    )
+    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0], modified_sequence)
+    
+    reduced_matrix_max, pos_mapping_max, reverse_mapping_max, modified_sequence_max = apply_reduction_method(
+        matrix, stem_dict, rna_sequence, method='maximal_stem'
+    )
+    print_reduced_matrix_info(reduced_matrix_max, pos_mapping_max, reverse_mapping_max, matrix.shape[0], modified_sequence_max)
     
 
     # Test the conversion function with example solution stems
     print("\n=== Testing conversion function ===")
+
+    solution_stems = [(1, 3, 13, 15), (6, 10, 20, 24)]
+    print(f"Original solution stems: {solution_stems}")
+
     # Example solution stems from the reduced matrix
     reduced_solution_stems = [(1, 3, 13, 15), (6, 10, 17, 21)]
     print(f"Reduced solution stems: {reduced_solution_stems}")
     
     # Convert back to original coordinates
-    converted_solution_stems = convert_reduced_solution_to_original(idle_reverse_mapping, reduced_solution_stems)
+    converted_solution_stems = convert_reduced_solution_to_original(reverse_mapping, reduced_solution_stems)
     print(f"Converted solution stems: {converted_solution_stems}")
 
-    solution_stems = [(1, 3, 13, 15), (6, 10, 20, 24)]
-    print(f"Original solution stems: {solution_stems}")
 
     # Create plots for both original and reduced solutions
-    make_plot(path, reduced_solution_stems, 'reduced_solution')
-    make_plot(path, converted_solution_stems, 'converted_solution')
-    make_plot(path, solution_stems, 'original_solution')
+    make_plot(rna_sequence, solution_stems, 'original_solution')
+    make_plot(rna_sequence, converted_solution_stems, 'converted_solution')
+    make_plot(modified_sequence, reduced_solution_stems, 'reduced_solution')
 
 
     """
