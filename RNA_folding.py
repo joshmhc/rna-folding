@@ -41,6 +41,134 @@ Possible reduction strategies for RNA folding:
 5. Merge maximal contiguous stems to a single super node, effectively reducing the problem size.
 """
 
+def find_sequence_symmetries(rna_sequence, min_symmetry_length=3):
+    """
+    Identifies different types of symmetries in the RNA sequence.
+    
+    Args:
+        rna_sequence (str): The RNA sequence string
+        min_symmetry_length (int): Minimum length for a symmetry to be considered
+        
+    Returns:
+        dict: Dictionary containing different types of symmetries found
+            - 'palindromes': List of palindrome positions (start, end, length)
+            - 'repeats': List of repeat positions (start1, end1, start2, end2, length)
+            - 'mirror_symmetries': List of mirror symmetry positions
+    """
+    n = len(rna_sequence)
+    symmetries = {
+        'palindromes': [],
+        'repeats': [],
+        'mirror_symmetries': []
+    }
+    
+    # 1. Find palindromes (sequences that read the same forward and backward)
+    for start in range(n - min_symmetry_length + 1):
+        for length in range(min_symmetry_length, n - start + 1):
+            end = start + length - 1
+            if end >= n:
+                break
+                
+            # Check if this subsequence is a palindrome
+            is_palindrome = True
+            for i in range(length // 2):
+                if rna_sequence[start + i] != rna_sequence[end - i]:
+                    is_palindrome = False
+                    break
+            
+            if is_palindrome:
+                symmetries['palindromes'].append((start, end, length))
+    
+    # 2. Find direct repeats (same sequence appearing multiple times)
+    for length in range(min_symmetry_length, n // 2 + 1):
+        for start1 in range(n - 2 * length + 1):
+            seq1 = rna_sequence[start1:start1 + length]
+            start2 = start1 + length
+            
+            # Look for the same sequence later in the string
+            for start2 in range(start1 + length, n - length + 1):
+                seq2 = rna_sequence[start2:start2 + length]
+                if seq1 == seq2:
+                    symmetries['repeats'].append((start1, start1 + length - 1, 
+                                                start2, start2 + length - 1, length))
+    
+    # 3. Find mirror symmetries (complementary sequences)
+    # A-T, G-C are complementary pairs
+    complement_map = {'a': 't', 't': 'a', 'g': 'c', 'c': 'g'}
+    
+    for start in range(n - min_symmetry_length + 1):
+        for length in range(min_symmetry_length, n - start + 1):
+            end = start + length - 1
+            if end >= n:
+                break
+                
+            # Look for the complementary sequence
+            for mirror_start in range(start + length, n - length + 1):
+                mirror_end = mirror_start + length - 1
+                is_complement = True
+                
+                for i in range(length):
+                    # Check if both positions have valid nucleotides
+                    if (rna_sequence[start + i] not in complement_map or 
+                        rna_sequence[mirror_start + length - 1 - i] not in complement_map):
+                        is_complement = False
+                        break
+                    
+                    # Check if they are complementary (reverse order for mirror)
+                    if rna_sequence[mirror_start + length - 1 - i] != complement_map[rna_sequence[start + i]]:
+                        is_complement = False
+                        break
+                
+                if is_complement:
+                    symmetries['mirror_symmetries'].append((start, end, mirror_start, mirror_end, length))
+                    break
+    
+    return symmetries
+
+def print_symmetry_analysis(rna_sequence, symmetries):
+    """Helper function to print symmetry analysis in a readable format."""
+    print(f"\nSymmetry Analysis for: {rna_sequence}")
+    
+    if symmetries['palindromes']:
+        print("\nPalindromes found:")
+        for start, end, length in symmetries['palindromes']:
+            palindrome = rna_sequence[start:end+1]
+            print(f"  Positions {start}-{end} (length {length}): '{palindrome}'")
+    else:
+        print("\nNo palindromes found.")
+    
+    if symmetries['repeats']:
+        print("\nDirect repeats found:")
+        for start1, end1, start2, end2, length in symmetries['repeats']:
+            repeat1 = rna_sequence[start1:end1+1]
+            repeat2 = rna_sequence[start2:end2+1]
+            print(f"  '{repeat1}' at positions {start1}-{end1} and '{repeat2}' at positions {start2}-{end2} (length {length})")
+    else:
+        print("\nNo direct repeats found.")
+    
+    if symmetries['mirror_symmetries']:
+        print("\nMirror symmetries (complementary) found:")
+        for start, end, mirror_start, mirror_end, length in symmetries['mirror_symmetries']:
+            seq1 = rna_sequence[start:end+1]
+            seq2 = rna_sequence[mirror_start:mirror_end+1]
+            print(f"  '{seq1}' at positions {start}-{end} and '{seq2}' at positions {mirror_start}-{mirror_end} (length {length})")
+    else:
+        print("\nNo mirror symmetries found.")
+
+def symmetry_reduction(bond_matrix, rna_sequence, min_len=5):
+    """
+    This function is used to reduce the problem size by leveraging the symmetry of the sequence.
+    """
+    # First, identify symmetries in the sequence
+    symmetries = find_sequence_symmetries(rna_sequence, min_len)
+    
+    print(f"Found symmetries:")
+    print(f"  Palindromes: {symmetries['palindromes']}")
+    print(f"  Repeats: {symmetries['repeats']}")
+    print(f"  Mirror symmetries: {symmetries['mirror_symmetries']}")
+    
+    return symmetries
+
 def merge_idle_sequence(bond_matrix, rna_sequence, min_len=5):
     """ Merges all idle sequences of consecutive nucleotides of the same type longer than min_len to super nodes.
     
@@ -820,7 +948,7 @@ def print_matrix_and_stem_dict(matrix, stem_dict):
     for i in stem_dict:
         print(i)
 
-def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, original_size, modified_sequence=None):
+def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, original_size, modified_sequence=None, min_stem=3, min_loop=2):
     """Helper function to print information about the reduced matrix."""
     print(f"Original matrix size: {original_size}")
     print(f"Reduced matrix size: {reduced_matrix.shape}")
@@ -837,6 +965,11 @@ def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, orig
     print("\nReverse mapping (new -> original positions):")
     for new_pos, orig_positions in sorted(reverse_mapping.items()):
         print(f"  {new_pos} -> {orig_positions}")
+    
+    # Find and print maximal stems in the reduced matrix
+    reduced_stem_dict = make_stem_dict(reduced_matrix, min_stem, min_loop)
+    print(f"\nMaximal stems in reduced matrix: {list(reduced_stem_dict.keys())}")
+    print(f"Number of maximal stems: {len(reduced_stem_dict)}")
     
     print("\nReduced matrix:")
     print(' ', end=' ')
@@ -890,6 +1023,46 @@ def main(path, verbose, min_stem, min_loop, c):
     Returns:
         None: None
     """
+    # Test symmetry detection with sample data
+    print("\n=== Testing symmetry detection with sample data ===")
+    
+    # Sample 1: Simple palindrome
+    sample1 = "atcgcta"
+    print(f"\nSample 1: {sample1}")
+    print("Expected: Palindrome at positions 0-6 (length 7)")
+    symmetries1 = find_sequence_symmetries(sample1, min_symmetry_length=3)
+    print_symmetry_analysis(sample1, symmetries1)
+    
+    # Sample 2: Direct repeat
+    sample2 = "atcgatcg"
+    print(f"\nSample 2: {sample2}")
+    print("Expected: Repeat 'atcg' at positions 0-3 and 4-7 (length 4)")
+    symmetries2 = find_sequence_symmetries(sample2, min_symmetry_length=3)
+    print_symmetry_analysis(sample2, symmetries2)
+    
+    # Sample 3: Mirror symmetry (complementary)
+    sample3 = "atcgtagc"
+    print(f"\nSample 3: {sample3}")
+    print("Expected: Mirror symmetry 'atcg' and 'tagc' (complementary)")
+    symmetries3 = find_sequence_symmetries(sample3, min_symmetry_length=3)
+    print_symmetry_analysis(sample3, symmetries3)
+    
+    # Sample 4: Complex sequence with multiple symmetries
+    sample4 = "atcgctagctagc"
+    print(f"\nSample 4: {sample4}")
+    print("Expected: Multiple symmetries including palindromes and repeats")
+    symmetries4 = find_sequence_symmetries(sample4, min_symmetry_length=3)
+    print_symmetry_analysis(sample4, symmetries4)
+    
+    # Sample 5: Real RNA-like sequence
+    sample5 = "aaagucgcugaagacuuaaaauucagg"
+    print(f"\nSample 5: {sample5}")
+    print("Expected: Various symmetries in realistic RNA sequence")
+    symmetries5 = find_sequence_symmetries(sample5, min_symmetry_length=3)
+    print_symmetry_analysis(sample5, symmetries5)
+    
+    """
+    #### Testing the reduction methods with hand made examples####
     # Read the RNA sequence for idle sequence detection
     with open(path) as f:
         rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
@@ -900,13 +1073,17 @@ def main(path, verbose, min_stem, min_loop, c):
 
     print_matrix_and_stem_dict(matrix, stem_dict)
     
+    # Test symmetry detection
+    print("\n=== Testing symmetry detection ===")
+    symmetries = symmetry_reduction(matrix, rna_sequence, min_len=3)
+    
     # Test the reduction methods using the helper function
     print("\n=== Testing reduction methods ===")
     
     reduced_matrix, pos_mapping, reverse_mapping, modified_sequence = apply_reduction_method(
         matrix, stem_dict, rna_sequence, method='maximal_stem'
     )
-    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0], modified_sequence)
+    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0], modified_sequence, min_stem, min_loop)
 
     # Test the conversion function with example solution stems
     print("\n=== Testing conversion function ===")
@@ -930,6 +1107,7 @@ def main(path, verbose, min_stem, min_loop, c):
     make_plot(rna_sequence, solution_stems, 'original_solution', seed=50)
     make_plot(rna_sequence, converted_solution_stems, 'converted_solution', seed=50)
     make_plot(modified_sequence, reduced_solution_stems, 'reduced_solution', seed=60)
+    """
 
     """
     #### Running the full pipeline ####
