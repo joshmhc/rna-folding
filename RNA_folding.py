@@ -255,19 +255,29 @@ def merge_maximal(bond_matrix, stem_dict, target_stem=None, rna_sequence=None):
     # Add the bond between the super-nodes
     reduced_matrix[min(first_super_node, second_super_node), max(first_super_node, second_super_node)] = stem_bond_strength
     
-    # Create modified sequence where merged stem positions are marked differently
+    # Create modified sequence where merged stem positions are compressed
     if rna_sequence is None:
         # If no sequence provided, return None for modified_sequence
         modified_sequence = None
     else:
-        # Create modified sequence where merged stem positions are marked with 'X'
-        modified_sequence = list(rna_sequence)
+        # Create compressed sequence where merged stem positions become single nodes
+        modified_sequence = []
+        i = 0
         
-        # Mark all positions in the target stem with 'X'
-        for i in range(target_stem[0], target_stem[1] + 1):  # First side
-            modified_sequence[i] = 'x'
-        for i in range(target_stem[2], target_stem[3] + 1):  # Second side
-            modified_sequence[i] = 'x'
+        while i < len(rna_sequence):
+            # Check if current position is part of the target stem
+            if (target_stem[0] <= i <= target_stem[1]) or (target_stem[2] <= i <= target_stem[3]):
+                # Add a single 'X' for the entire stem
+                modified_sequence.append('x')
+                # Skip to after the stem
+                if target_stem[0] <= i <= target_stem[1]:
+                    i = target_stem[1] + 1  # Skip first side
+                else:
+                    i = target_stem[3] + 1  # Skip second side
+            else:
+                # Add individual nucleotide
+                modified_sequence.append(rna_sequence[i])
+                i += 1
         
         modified_sequence = ''.join(modified_sequence)
     
@@ -338,16 +348,18 @@ def make_stem_dict(bond_matrix, min_stem, min_loop):
     for i in range(n + 1 - (2 * min_stem + min_loop)):
         for j in range(i + 2 * min_stem + min_loop - 1, n):
             if bond_matrix[i, j] > 0:
-                k = 1
+                k = bond_matrix[i, j]  # Start with the bond strength at current position
                 # Check down and left for length of stem.
                 # Note that bond_matrix is strictly upper triangular, so loop will terminate.
-                while bond_matrix[i + k, j - k] > 0:
-                    bond_matrix[i + k, j - k] = 0
-                    k += 1
+                offset = 1
+                while i + offset < n and j - offset >= 0 and bond_matrix[i + offset, j - offset] > 0:
+                    k += bond_matrix[i + offset, j - offset]  # Add bond strength to sum
+                    bond_matrix[i + offset, j - offset] = 0
+                    offset += 1
 
                 if k >= min_stem:
                     # A 4-tuple is used to represent the stem.
-                    stem_dict[(i, i + k - 1, j - k + 1, j)] = []
+                    stem_dict[(i, i + offset - 1, j - offset + 1, j)] = []
 
     # Iterate through all sub-stems weakly contained in a maximal stem under inclusion.
     for stem in stem_dict.keys():
@@ -385,15 +397,140 @@ def apply_reduction_method(bond_matrix, stem_dict, rna_sequence, method='idle_se
     """
     
     if method == 'idle_sequence':
+        print("Testing idle_sequence reduction:", kwargs.get('min_len', 5))
         min_len = kwargs.get('min_len', 5)
         return merge_idle_sequence(bond_matrix, rna_sequence, min_len)
     
     elif method == 'maximal_stem':
+        print("Testing maximal_stem reduction:", kwargs.get('target_stem', None))
         target_stem = kwargs.get('target_stem', None)
         return merge_maximal(bond_matrix, stem_dict, target_stem, rna_sequence)
     
     else:
         raise ValueError(f"Unknown reduction method: {method}. Available methods: 'idle_sequence', 'maximal_stem'")
+
+def solve_reduced_problem(bond_matrix, stem_dict, rna_sequence, reduction_method='maximal_stem', 
+                         min_stem=3, min_loop=2, c=0.3, verbose=True, **kwargs):
+    """ Complete pipeline: reduce problem, solve with D-Wave, convert back, and plot results.
+    
+    Args:
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix.
+        stem_dict (dict):
+            Dictionary with maximal stems as keys.
+        rna_sequence (str):
+            The RNA sequence string.
+        reduction_method (str):
+            Reduction method to use ('maximal_stem' or 'idle_sequence').
+        min_stem (int):
+            Minimum stem length for stem detection.
+        min_loop (int):
+            Minimum loop size for stem detection.
+        c (float):
+            Pseudoknot penalty coefficient.
+        verbose (bool):
+            Whether to print detailed information.
+        **kwargs:
+            Additional arguments for specific reduction methods.
+            
+    Returns:
+        tuple: (original_solution_stems, reduced_solution_stems, modified_sequence)
+            - original_solution_stems: Solution in original coordinates
+            - reduced_solution_stems: Solution in reduced coordinates
+            - modified_sequence: Modified sequence with merged nodes
+    """
+    
+    if verbose:
+        print(f"\n=== Solving with {reduction_method} reduction ===")
+    
+    # Step 1: Apply reduction method
+    reduced_matrix, pos_mapping, reverse_mapping, modified_sequence = apply_reduction_method(
+        bond_matrix, stem_dict, rna_sequence, method=reduction_method, **kwargs
+    )
+    
+    if verbose:
+        print(f"Original matrix size: {bond_matrix.shape[0]}")
+        print(f"Reduced matrix size: {reduced_matrix.shape[0]}")
+        print(f"Reduction: {bond_matrix.shape[0]} -> {reduced_matrix.shape[0]} nodes")
+        print(f"Modified sequence: {modified_sequence}")
+    
+    # Step 2: Create stem dictionary for reduced problem
+    reduced_stem_dict = make_stem_dict(reduced_matrix, min_stem, min_loop)
+    
+    if not reduced_stem_dict:
+        print("No stems found in reduced problem!")
+        return [], [], modified_sequence
+    
+    if verbose:
+        print(f"Found {len(reduced_stem_dict)} maximal stems in reduced problem")
+    
+    # Step 3: Build CQM for reduced problem
+    if verbose:
+        print("Building CQM for reduced problem...")
+    
+    cqm = build_cqm(reduced_stem_dict, min_stem, c)
+    
+    # Step 4: Solve with D-Wave
+    if verbose:
+        print("Connecting to D-Wave Solver...")
+    
+    try:
+        from dwave.system import LeapHybridCQMSampler
+        sampler = LeapHybridCQMSampler()
+        
+        if verbose:
+            print("Finding solution...")
+        
+        sample_set = sampler.sample_cqm(cqm)
+        sample_set.resolve()
+        
+        if verbose:
+            print("Processing solution...")
+        
+        # Step 5: Process solution
+        reduced_solution_stems = process_cqm_solution(sample_set, verbose)
+        
+        if not reduced_solution_stems:
+            print("No solution found!")
+            return [], [], modified_sequence
+        
+        # Step 6: Convert back to original coordinates
+        original_solution_stems = convert_reduced_solution_to_original(reverse_mapping, reduced_solution_stems)
+        
+        if verbose:
+            print(f"Reduced solution stems: {reduced_solution_stems}")
+            print(f"Original solution stems: {original_solution_stems}")
+        
+        # Step 7: Create plots
+        if verbose:
+            print("Creating plots...")
+        
+        # Plot original solution
+        make_plot(rna_sequence, original_solution_stems, f'{reduction_method}_original_solution', seed=50)
+        
+        # Plot reduced solution
+        make_plot(modified_sequence, reduced_solution_stems, f'{reduction_method}_reduced_solution', seed=60)
+        
+        if verbose:
+            print(f"Plots saved as {reduction_method}_original_solution.png and {reduction_method}_reduced_solution.png")
+        
+        return original_solution_stems, reduced_solution_stems, modified_sequence
+        
+    except ImportError:
+        print("D-Wave Ocean SDK not available. Using dummy solution for demonstration.")
+        # Create a dummy solution for demonstration
+        dummy_stems = list(reduced_stem_dict.keys())[:2]  # Take first 2 stems as dummy solution
+        original_solution_stems = convert_reduced_solution_to_original(reverse_mapping, dummy_stems)
+        
+        if verbose:
+            print(f"Dummy reduced solution stems: {dummy_stems}")
+            print(f"Dummy original solution stems: {original_solution_stems}")
+        
+        # Create plots
+        make_plot(rna_sequence, original_solution_stems, f'{reduction_method}_original_solution', seed=50)
+        make_plot(modified_sequence, dummy_stems, f'{reduction_method}_reduced_solution', seed=60)
+        
+        return original_solution_stems, dummy_stems, modified_sequence
 
 def create_modified_sequence_file(modified_sequence, base_filename='modified_sequence'):
     """ Creates a temporary file with the modified sequence for plotting purposes.
@@ -516,7 +653,7 @@ def pseudoknot_terms(stem_dict, min_stem=3, c=0.3):
                             if substem1[1] < substem2[0] and substem2[1] < substem1[2] and substem1[3] < substem2[2]})
     return pseudos
 
-def make_plot(rna_sequence, stems, fig_name='RNA_plot'):
+def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1):
     """ Produces graph plot and saves as .png file.
 
     Args:
@@ -562,7 +699,7 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot'):
             node_sizes.append(200)
 
     options = {"edgecolors": "tab:gray", "alpha": 0.8}
-    pos = nx.spring_layout(G, iterations=5000, seed=42)  # Fixed seed for reproducible layout
+    pos = nx.spring_layout(G, iterations=5000, seed=seed)  # Fixed seed for reproducible layout
     nx.draw_networkx_nodes(G, pos, node_color=color_map, node_size=node_sizes, **options)
 
     labels = {i: rna[i].upper() for i in range(len(rna))}
@@ -691,7 +828,7 @@ def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, orig
     
     if modified_sequence:
         print(f"\nModified sequence: {modified_sequence}")
-        print("Note: 'X' marks merged positions")
+        print("Note: 'x' marks merged positions")
     
     print("\nPosition mapping (original -> new):")
     for orig_pos, new_pos in sorted(pos_mapping.items()):
@@ -733,7 +870,6 @@ DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'simple_pseudo.txt')
               help='Multiplier for the coefficient of the quadratic terms for pseudoknots.')
 def main(path, verbose, min_stem, min_loop, c):
 
-
     """ Find optimal stem configuration of an RNA sequence.
 
     Reads file, creates constrained quadratic model, solves model, and creates a plot of the result.
@@ -767,17 +903,10 @@ def main(path, verbose, min_stem, min_loop, c):
     # Test the reduction methods using the helper function
     print("\n=== Testing reduction methods ===")
     
-    # Test idle sequence reduction
     reduced_matrix, pos_mapping, reverse_mapping, modified_sequence = apply_reduction_method(
-        matrix, stem_dict, rna_sequence, method='idle_sequence', min_len=4
-    )
-    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0], modified_sequence)
-    
-    reduced_matrix_max, pos_mapping_max, reverse_mapping_max, modified_sequence_max = apply_reduction_method(
         matrix, stem_dict, rna_sequence, method='maximal_stem'
     )
-    print_reduced_matrix_info(reduced_matrix_max, pos_mapping_max, reverse_mapping_max, matrix.shape[0], modified_sequence_max)
-    
+    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0], modified_sequence)
 
     # Test the conversion function with example solution stems
     print("\n=== Testing conversion function ===")
@@ -786,7 +915,10 @@ def main(path, verbose, min_stem, min_loop, c):
     print(f"Original solution stems: {solution_stems}")
 
     # Example solution stems from the reduced matrix
-    reduced_solution_stems = [(1, 3, 13, 15), (6, 10, 17, 21)]
+    reduced_stems = make_stem_dict(reduced_matrix, min_stem, min_loop)
+    print(f"Reduced stems: {reduced_stems.keys()}")
+
+    reduced_solution_stems = [(1, 3, 9, 11), (6, 6, 16, 16)]
     print(f"Reduced solution stems: {reduced_solution_stems}")
     
     # Convert back to original coordinates
@@ -795,40 +927,25 @@ def main(path, verbose, min_stem, min_loop, c):
 
 
     # Create plots for both original and reduced solutions
-    make_plot(rna_sequence, solution_stems, 'original_solution')
-    make_plot(rna_sequence, converted_solution_stems, 'converted_solution')
-    make_plot(modified_sequence, reduced_solution_stems, 'reduced_solution')
-
+    make_plot(rna_sequence, solution_stems, 'original_solution', seed=50)
+    make_plot(rna_sequence, converted_solution_stems, 'converted_solution', seed=50)
+    make_plot(modified_sequence, reduced_solution_stems, 'reduced_solution', seed=60)
 
     """
-    if verbose:
-        print('\nPreprocessing data from:', path)
+    #### Running the full pipeline ####
+    # Test with maximal stem reduction
+    print("\n--- Testing maximal stem reduction ---")
+    original_stems_max, reduced_stems_max, modified_seq_max = solve_reduced_problem(
+        matrix, stem_dict, rna_sequence, reduction_method='maximal_stem', 
+        min_stem=min_stem, min_loop=min_loop, c=c, verbose=True
+    )
 
-    matrix = text_to_matrix(path, min_loop)
-    stem_dict = make_stem_dict(matrix, min_stem, min_loop)
-
-    if stem_dict:
-        cqm = build_cqm(stem_dict, min_stem, c)
-    else:
-        print('\nNo possible stems were found. You may need to check your parameters.')
-        return None
-
-    if verbose:
-        print('Connecting to Solver...')
-
-    sampler = LeapHybridCQMSampler()
-
-    if verbose:
-        print('Finding Solution...')
-
-    sample_set = sampler.sample_cqm(cqm)
-    sample_set.resolve()
-
-    if verbose:
-        print('Processing solution...')
-
-    stems = process_cqm_solution(sample_set, verbose)
-    make_plot(path, stems)
+    # Test with idle sequence reduction
+    print("\n--- Testing idle sequence reduction ---")
+    original_stems_idle, reduced_stems_idle, modified_seq_idle = solve_reduced_problem(
+        matrix, stem_dict, rna_sequence, reduction_method='idle_sequence', 
+        min_stem=min_stem, min_loop=min_loop, c=c, verbose=True, min_len=4
+    )
     """
 
 if __name__ == "__main__":
