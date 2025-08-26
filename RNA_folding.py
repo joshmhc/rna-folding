@@ -18,6 +18,8 @@ from os.path import dirname, join
 from collections import defaultdict
 from itertools import product, combinations
 
+import tempfile
+import os
 import click
 import matplotlib
 import numpy as np
@@ -29,6 +31,232 @@ try:
 except ImportError:
     matplotlib.use("agg")
     import matplotlib.pyplot as plt
+
+"""
+Possible reduction strategies for RNA folding:
+1. Collapse idle sequence of nucleotides, considering them as a single base with higher energy
+2. Leverage Repetition or symmetry of nucleotides
+3. Dynamic programming, Cut and find optimal sting configuration for each.
+4. Pruning of base pairs with high energy, assuming we do not change the solution too much
+5. Merge maximal contiguous stems to a single super node, effectively reducing the problem size.
+"""
+
+def merge_idle_sequence(bond_matrix, rna_sequence, min_len=10):
+    """ Merges all idle sequences of consecutive nucleotides of the same type longer than min_len to super nodes.
+    
+    Args:
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix of 0's and 1's.
+        rna_sequence (str):
+            The RNA sequence string.
+        min_len (int):
+            Minimum length of idle sequence to merge.
+            
+    Returns:
+        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
+            - reduced_matrix: New matrix with idle sequences as super-nodes
+            - position_mapping: Maps original positions to new positions
+            - reverse_mapping: Maps new positions back to original positions
+            - modified_sequence: RNA sequence with merged nodes marked differently
+    """
+
+    n = bond_matrix.shape[0]
+    
+    # Find idle sequences (consecutive nucleotides of the same type)
+    idle_sequences = []
+    current_sequence = []
+    current_type = None
+    
+    for i in range(n):
+        current_nucleotide = rna_sequence[i]
+        
+        if current_nucleotide == current_type:
+            current_sequence.append(i)
+        else:
+            # Check if previous sequence meets minimum length
+            if len(current_sequence) >= min_len:
+                idle_sequences.append(current_sequence)
+            
+            # Start new sequence
+            current_sequence = [i]
+            current_type = current_nucleotide
+    
+    # Don't forget the last sequence
+    if len(current_sequence) >= min_len:
+        idle_sequences.append(current_sequence)
+    
+    # Create position mapping
+    position_mapping = {}
+    reverse_mapping = {}
+    new_pos = 0
+    i = 0
+    
+    while i < n:
+        # Check if current position is part of an idle sequence
+        in_idle_sequence = False
+        for seq in idle_sequences:
+            if i in seq:
+                # Map all positions in this idle sequence to the same position
+                for pos in seq:
+                    position_mapping[pos] = new_pos
+                reverse_mapping[new_pos] = seq
+                new_pos += 1
+                # Skip to after the sequence
+                i = max(seq) + 1
+                in_idle_sequence = True
+                break
+        
+        if not in_idle_sequence:
+            # Map individual position
+            position_mapping[i] = new_pos
+            reverse_mapping[new_pos] = [i]
+            new_pos += 1
+            i += 1
+    
+    # Create reduced matrix
+    reduced_size = new_pos
+    reduced_matrix = np.zeros((reduced_size, reduced_size), dtype=int)
+    
+    # Fill the reduced matrix, summing bond strengths for merged nodes
+    for i in range(n):
+        for j in range(i + 1, n):  # Upper triangular only
+            if bond_matrix[i, j] > 0:
+                new_i = position_mapping[i]
+                new_j = position_mapping[j]
+                if new_i != new_j:  # Don't create self-loops
+                    # Add bond strength (will sum if multiple bonds map to same position)
+                    reduced_matrix[min(new_i, new_j), max(new_i, new_j)] += bond_matrix[i, j]
+    
+    # Create modified sequence where merged nodes occupy one character
+    modified_sequence = []
+    i = 0
+    while i < n:
+        # Check if current position is part of an idle sequence
+        in_idle_sequence = False
+        for seq in idle_sequences:
+            if i in seq:
+                # Add a single character for the entire idle sequence
+                modified_sequence.append('X')
+                # Skip to after the sequence
+                i = max(seq) + 1
+                in_idle_sequence = True
+                break
+        
+        if not in_idle_sequence:
+            # Add individual nucleotide
+            modified_sequence.append(rna_sequence[i])
+            i += 1
+    
+    modified_sequence = ''.join(modified_sequence)
+    
+    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
+
+def merge_maximal(bond_matrix, stem_dict, target_stem=None):
+    """ Merges a single maximal stem to a super node, effectively reducing the problem size.
+    
+    Args:
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix of 0's and 1's.
+        stem_dict (dict):
+            Dictionary with maximal stems as keys.
+        target_stem (tuple, optional):
+            Specific maximal stem to collapse. If None, uses the first maximal stem.
+            
+    Returns:
+        tuple: (reduced_matrix, position_mapping, reverse_mapping)
+            - reduced_matrix: New matrix with the target stem as a super-node
+            - position_mapping: Maps original positions to new positions
+            - reverse_mapping: Maps new positions back to original positions
+    """
+    
+    n = bond_matrix.shape[0]
+    maximal_stems = list(stem_dict.keys())
+
+    if len(maximal_stems) == 0:
+        return bond_matrix.copy(), {i: i for i in range(n)}, {i: [i] for i in range(n)}
+    
+    # Select which stem to collapse
+    if target_stem is None:
+        # Choose the longest maximal stem
+        target_stem = max(maximal_stems, key=lambda stem: stem[1] - stem[0] + 1)
+    
+    if target_stem not in maximal_stems:
+        raise ValueError(f"Target stem {target_stem} is not a maximal stem")
+    
+    # Create position mapping: original positions -> new positions
+    position_mapping = {}
+    reverse_mapping = {}
+    new_pos = 0
+    
+    # Get positions for each side of the target stem
+    first_side_positions = set()
+    second_side_positions = set()
+    
+    for i in range(target_stem[0], target_stem[1] + 1):  # First side of stem
+        first_side_positions.add(i)
+    for i in range(target_stem[2], target_stem[3] + 1):  # Second side of stem
+        second_side_positions.add(i)
+    
+    # Create position mapping maintaining relative positions
+    new_pos = 0
+    i = 0
+    
+    while i < n:
+        if i in first_side_positions:
+            # Map all positions in first side to the same position
+            for pos in first_side_positions:
+                position_mapping[pos] = new_pos
+            reverse_mapping[new_pos] = list(first_side_positions)
+            new_pos += 1
+            # Skip to after the first side
+            i = max(first_side_positions) + 1
+        elif i in second_side_positions:
+            # Map all positions in second side to the same position
+            for pos in second_side_positions:
+                position_mapping[pos] = new_pos
+            reverse_mapping[new_pos] = list(second_side_positions)
+            new_pos += 1
+            # Skip to after the second side
+            i = max(second_side_positions) + 1
+        else:
+            # Map individual position
+            position_mapping[i] = new_pos
+            reverse_mapping[new_pos] = [i]
+            new_pos += 1
+            i += 1
+    
+    # Create reduced matrix
+    reduced_size = new_pos
+    reduced_matrix = np.zeros((reduced_size, reduced_size), dtype=int)
+    
+    # Fill the reduced matrix, excluding bonds involving collapsed nodes
+    for i in range(n):
+        for j in range(i + 1, n):  # Upper triangular only
+            if bond_matrix[i, j] > 0:
+                # Skip bonds that involve positions in the collapsed stem
+                if i in first_side_positions or i in second_side_positions or j in first_side_positions or j in second_side_positions:
+                    continue
+                
+                new_i = position_mapping[i]
+                new_j = position_mapping[j]
+                if new_i != new_j:  # Don't create self-loops
+                    reduced_matrix[min(new_i, new_j), max(new_i, new_j)] = bond_matrix[i, j]
+    
+    # Add bond between the two stem super-nodes
+    # The strength is the number of bond pairs in the stem
+    stem_length = target_stem[1] - target_stem[0] + 1
+    stem_bond_strength = stem_length  # Number of bond pairs equals stem length
+    
+    # Find the positions of the two super-nodes
+    first_super_node = position_mapping[target_stem[0]]  # Any position from first side
+    second_super_node = position_mapping[target_stem[2]]  # Any position from second side
+    
+    # Add the bond between the super-nodes
+    reduced_matrix[min(first_super_node, second_super_node), max(first_super_node, second_super_node)] = stem_bond_strength
+    
+    return reduced_matrix, position_mapping, reverse_mapping
+
+
 
 
 def text_to_matrix(file_name, min_loop):
@@ -60,8 +288,9 @@ def text_to_matrix(file_name, min_loop):
     # Recall that 't' is sometimes used as a stand-in for 'u'.
     hydrogen_bonds = [('a', 't'), ('a', 'u'), ('c', 'g'), ('g', 't'), ('g', 'u')]
 
-    # Create a upper triangular 0/1 matrix indicating where bonds may occur.
-    bond_matrix = np.zeros((len(rna), len(rna)), dtype=bool)
+    # Create a upper triangular matrix indicating bonding pairs.
+    # All bonds have strength 1 for simplicity.
+    bond_matrix = np.zeros((len(rna), len(rna)), dtype=int)
     for pair in hydrogen_bonds:
         for bond in product(index_dict[pair[0]], index_dict[pair[1]]):
             if abs(bond[0] - bond[1]) > min_loop:
@@ -95,12 +324,12 @@ def make_stem_dict(bond_matrix, min_stem, min_loop):
     # Iterate through matrix looking for possible stems.
     for i in range(n + 1 - (2 * min_stem + min_loop)):
         for j in range(i + 2 * min_stem + min_loop - 1, n):
-            if bond_matrix[i, j]:
+            if bond_matrix[i, j] > 0:
                 k = 1
                 # Check down and left for length of stem.
                 # Note that bond_matrix is strictly upper triangular, so loop will terminate.
-                while bond_matrix[i + k, j - k]:
-                    bond_matrix[i + k, j - k] = False
+                while bond_matrix[i + k, j - k] > 0:
+                    bond_matrix[i + k, j - k] = 0
                     k += 1
 
                 if k >= min_stem:
@@ -115,6 +344,47 @@ def make_stem_dict(bond_matrix, min_stem, min_loop):
 
     return stem_dict
 
+
+def convert_reduced_solution_to_original(reverse_mapping, reduced_solution_stems):
+    """ Converts solution stems from reduced matrix back to original matrix using reverse mapping.
+    
+    Args:
+        reverse_mapping (dict):
+            Maps new positions back to original positions.
+        reduced_solution_stems (list):
+            List of stems in solution from reduced matrix, encoded as 4-tuples.
+            
+    Returns:
+        list: List of stems in original matrix coordinates.
+    """
+    original_solution_stems = []
+    
+    for stem in reduced_solution_stems:
+        # Get the mapped position groups for each side of the stem
+        first_side_group = reverse_mapping[stem[0]]
+        first_side_end_group = reverse_mapping[stem[1]]
+        second_side_group = reverse_mapping[stem[2]]
+        second_side_end_group = reverse_mapping[stem[3]]
+        
+        # Calculate the maximal valid length based on position ranges
+        # Get the maximum possible ranges for each side
+        max_first_range = reverse_mapping[stem[1]][-1] - reverse_mapping[stem[0]][0] + 1
+        max_second_range = reverse_mapping[stem[3]][-1] - reverse_mapping[stem[2]][0] + 1
+        
+        # The stem length is limited by the smaller of the two ranges
+        max_stem_length = min(max_first_range, max_second_range)
+        
+        # Create the stem using the maximal valid length
+        first_side_start = reverse_mapping[stem[0]][0]
+        first_side_end = first_side_start + max_stem_length - 1
+        second_side_start = reverse_mapping[stem[2]][0]
+        second_side_end = second_side_start + max_stem_length - 1
+        
+        # Create the stem in original coordinates
+        original_stem = (first_side_start, first_side_end, second_side_start, second_side_end)
+        original_solution_stems.append(original_stem)
+    
+    return original_solution_stems
 
 def check_overlap(stem1, stem2):
     """ Checks if 2 stems use any of the same nucleotides.
@@ -186,6 +456,10 @@ def make_plot(file, stems, fig_name='RNA_plot'):
         fig_name (str):
             Name of file created to save figure. ".png" is added automatically
     """
+
+    # Clear the current figure to prevent overlapping plots
+    plt.clf()
+    plt.close('all')
 
     # Read RNA file for length and labels.
     with open(file) as f:
@@ -316,9 +590,57 @@ def process_cqm_solution(sample_set, verbose=True):
 
     return bonded_stems
 
+def print_matrix_and_stem_dict(matrix, stem_dict):
+    print(' ', end=' ')
+    for i in range(len(matrix)):
+        print(i%10, end=' ')
+    print()
+    for i in range(len(matrix)):
+        print(i%10, end=' ')
+        for j in range(len(matrix[i])):
+            if int(matrix[i][j]) == 0:
+                print('□', end=' ')
+            else:
+                print(int(matrix[i][j]), end=' ')
+        print()
+        
+    for i in stem_dict:
+        print(i)
+
+def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, original_size, modified_sequence=None):
+    """Helper function to print information about the reduced matrix."""
+    print(f"Original matrix size: {original_size}")
+    print(f"Reduced matrix size: {reduced_matrix.shape}")
+    print(f"Reduction: {original_size} -> {reduced_matrix.shape[0]} nodes")
+    
+    if modified_sequence:
+        print(f"\nModified sequence: {modified_sequence}")
+        print("Note: 'X' marks merged positions")
+    
+    print("\nPosition mapping (original -> new):")
+    for orig_pos, new_pos in sorted(pos_mapping.items()):
+        print(f"  {orig_pos} -> {new_pos}")
+    
+    print("\nReverse mapping (new -> original positions):")
+    for new_pos, orig_positions in sorted(reverse_mapping.items()):
+        print(f"  {new_pos} -> {orig_positions}")
+    
+    print("\nReduced matrix:")
+    print(' ', end=' ')
+    for i in range(len(reduced_matrix)):
+        print(i%10, end=' ')
+    print()
+    for i in range(len(reduced_matrix)):
+        print(i%10, end=' ')
+        for j in range(len(reduced_matrix[i])):
+            if int(reduced_matrix[i][j]) == 0:
+                print('□', end=' ')
+            else:
+                print(int(reduced_matrix[i][j]), end=' ')
+        print()
 
 # Create command line functionality.
-DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'TMGMV_UPD-PK1.txt')
+DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'simple_pseudo.txt')
 
 
 @click.command(help='Solve an instance of the RNA folding problem using '
@@ -334,6 +656,8 @@ DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'TMGMV_UPD-PK1.txt')
 @click.option('-c', type=click.FloatRange(0,), default=0.3,
               help='Multiplier for the coefficient of the quadratic terms for pseudoknots.')
 def main(path, verbose, min_stem, min_loop, c):
+
+
     """ Find optimal stem configuration of an RNA sequence.
 
     Reads file, creates constrained quadratic model, solves model, and creates a plot of the result.
@@ -353,6 +677,53 @@ def main(path, verbose, min_stem, min_loop, c):
 
     Returns:
         None: None
+    """
+    
+    matrix = text_to_matrix(path, min_loop)
+    matrix_copy = np.copy(matrix)
+    stem_dict = make_stem_dict(matrix_copy, min_stem, min_loop)
+
+    print_matrix_and_stem_dict(matrix, stem_dict)
+    
+    # Test the merge_maximal function
+    print("\n=== Testing merge_maximal function ===")
+    
+    """
+    # Get the first maximal stem to collapse
+    maximal_stems = list(stem_dict.keys())
+        
+    reduced_matrix, pos_mapping, reverse_mapping = merge_maximal(matrix, stem_dict, None)
+    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0])
+    """
+
+    # Test the merge_idle_sequence function
+    print("\n=== Testing merge_idle_sequence function ===")
+    # Read the RNA sequence for idle sequence detection
+    with open(path) as f:
+        rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
+    idle_reduced_matrix, idle_pos_mapping, idle_reverse_mapping, modified_sequence = merge_idle_sequence(matrix, rna_sequence, min_len=4)
+    print_reduced_matrix_info(idle_reduced_matrix, idle_pos_mapping, idle_reverse_mapping, matrix.shape[0], modified_sequence)
+    
+
+    # Test the conversion function with example solution stems
+    print("\n=== Testing conversion function ===")
+    # Example solution stems from the reduced matrix
+    reduced_solution_stems = [(1, 3, 13, 15), (6, 10, 17, 21)]
+    print(f"Reduced solution stems: {reduced_solution_stems}")
+    
+    # Convert back to original coordinates
+    converted_solution_stems = convert_reduced_solution_to_original(idle_reverse_mapping, reduced_solution_stems)
+    print(f"Converted solution stems: {converted_solution_stems}")
+
+    solution_stems = [(1, 3, 13, 15), (6, 10, 20, 24)]
+    print(f"Original solution stems: {solution_stems}")
+
+    # Create plots for both original and reduced solutions
+    make_plot(path, reduced_solution_stems, 'reduced_solution')
+    make_plot(path, converted_solution_stems, 'converted_solution')
+    make_plot(path, solution_stems, 'original_solution')
+
+
     """
     if verbose:
         print('\nPreprocessing data from:', path)
@@ -382,7 +753,7 @@ def main(path, verbose, min_stem, min_loop, c):
 
     stems = process_cqm_solution(sample_set, verbose)
     make_plot(path, stems)
-
+    """
 
 if __name__ == "__main__":
     main()
