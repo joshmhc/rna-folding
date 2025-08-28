@@ -41,119 +41,339 @@ Possible reduction strategies for RNA folding:
 5. Merge maximal contiguous stems to a single super node, effectively reducing the problem size.
 """
 
-def find_sequence_symmetries(rna_sequence, min_symmetry_length=3):
+def reduce_palindrome_symmetry(bond_matrix, rna_sequence, palindrome, symmetry_factor=2):
     """
-    Identifies different types of symmetries in the RNA sequence.
+    Reduce problem by merging palindrome halves into super-nodes.
     
     Args:
-        rna_sequence (str): The RNA sequence string
-        min_symmetry_length (int): Minimum length for a symmetry to be considered
-        
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix.
+        rna_sequence (str):
+            The RNA sequence string.
+        palindrome (tuple):
+            Palindrome information (start, end, length).
+        symmetry_factor (int):
+            Factor to multiply bond strengths for symmetric regions.
+            
     Returns:
-        dict: Dictionary containing different types of symmetries found
-            - 'palindromes': List of palindrome positions (start, end, length)
-            - 'repeats': List of repeat positions (start1, end1, start2, end2, length)
-            - 'mirror_symmetries': List of mirror symmetry positions
+        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
     """
-    n = len(rna_sequence)
-    symmetries = {
-        'palindromes': [],
-        'repeats': [],
-        'mirror_symmetries': []
-    }
+    start, end, length = palindrome
+    n = bond_matrix.shape[0]
     
-    # 1. Find palindromes (sequences that read the same forward and backward)
-    for start in range(n - min_symmetry_length + 1):
-        for length in range(min_symmetry_length, n - start + 1):
-            end = start + length - 1
-            if end >= n:
-                break
-                
-            # Check if this subsequence is a palindrome
-            is_palindrome = True
-            for i in range(length // 2):
-                if rna_sequence[start + i] != rna_sequence[end - i]:
-                    is_palindrome = False
-                    break
-            
-            if is_palindrome:
-                symmetries['palindromes'].append((start, end, length))
+    # Calculate mid-point of palindrome
+    mid_point = start + length // 2
     
-    # 2. Find direct repeats (same sequence appearing multiple times)
-    for length in range(min_symmetry_length, n // 2 + 1):
-        for start1 in range(n - 2 * length + 1):
-            seq1 = rna_sequence[start1:start1 + length]
-            start2 = start1 + length
-            
-            # Look for the same sequence later in the string
-            for start2 in range(start1 + length, n - length + 1):
-                seq2 = rna_sequence[start2:start2 + length]
-                if seq1 == seq2:
-                    symmetries['repeats'].append((start1, start1 + length - 1, 
-                                                start2, start2 + length - 1, length))
+    # Define the two halves of the palindrome
+    first_half = list(range(start, mid_point))
+    second_half = list(range(mid_point + 1, end + 1))
     
-    # 3. Find mirror symmetries (complementary sequences)
-    # A-T, G-C are complementary pairs
-    complement_map = {'a': 't', 't': 'a', 'g': 'c', 'c': 'g'}
+    # Handle odd-length palindromes (center position is shared)
+    center_position = None
+    if length % 2 == 1:
+        center_position = mid_point
+        # Remove center from both halves if it exists
+        if center_position in first_half:
+            first_half.remove(center_position)
+        if center_position in second_half:
+            second_half.remove(center_position)
     
-    for start in range(n - min_symmetry_length + 1):
-        for length in range(min_symmetry_length, n - start + 1):
-            end = start + length - 1
-            if end >= n:
-                break
-                
-            # Look for the complementary sequence
-            for mirror_start in range(start + length, n - length + 1):
-                mirror_end = mirror_start + length - 1
-                is_complement = True
-                
-                for i in range(length):
-                    # Check if both positions have valid nucleotides
-                    if (rna_sequence[start + i] not in complement_map or 
-                        rna_sequence[mirror_start + length - 1 - i] not in complement_map):
-                        is_complement = False
-                        break
+    # Create position mapping
+    position_mapping = {}
+    reverse_mapping = {}
+    new_pos = 0
+    
+    # Map positions outside palindrome normally
+    for i in range(n):
+        if i < start or i > end:
+            position_mapping[i] = new_pos
+            reverse_mapping[new_pos] = [i]
+            new_pos += 1
+    
+    # Map first half of palindrome to a super-node
+    if first_half:
+        for pos in first_half:
+            position_mapping[pos] = new_pos
+        reverse_mapping[new_pos] = first_half
+        new_pos += 1
+    
+    # Map center position (if odd-length palindrome)
+    if center_position is not None:
+        position_mapping[center_position] = new_pos
+        reverse_mapping[new_pos] = [center_position]
+        new_pos += 1
+    
+    # Map second half of palindrome to a super-node
+    if second_half:
+        for pos in second_half:
+            position_mapping[pos] = new_pos
+        reverse_mapping[new_pos] = second_half
+        new_pos += 1
+    
+    # Create reduced matrix
+    reduced_size = new_pos
+    reduced_matrix = np.zeros((reduced_size, reduced_size), dtype=int)
+    
+    # Fill reduced matrix with bond strengths
+    for i_orig in range(n):
+        for j_orig in range(i_orig + 1, n):
+            if bond_matrix[i_orig, j_orig] > 0:
+                new_i, new_j = position_mapping[i_orig], position_mapping[j_orig]
+                if new_i != new_j:
+                    # Check if both positions are in palindrome halves
+                    i_in_first_half = i_orig in first_half
+                    i_in_second_half = i_orig in second_half
+                    j_in_first_half = j_orig in first_half
+                    j_in_second_half = j_orig in second_half
                     
-                    # Check if they are complementary (reverse order for mirror)
-                    if rna_sequence[mirror_start + length - 1 - i] != complement_map[rna_sequence[start + i]]:
-                        is_complement = False
-                        break
-                
-                if is_complement:
-                    symmetries['mirror_symmetries'].append((start, end, mirror_start, mirror_end, length))
-                    break
+                    # Enhanced bond strength for symmetric regions
+                    bond_strength = bond_matrix[i_orig, j_orig]
+                    
+                    # If both positions are in palindrome halves, enhance bond strength
+                    if ((i_in_first_half and j_in_second_half) or 
+                        (i_in_second_half and j_in_first_half)):
+                        bond_strength *= symmetry_factor
+                    
+                    reduced_matrix[min(new_i, new_j), max(new_i, new_j)] += bond_strength
     
-    return symmetries
+    # Create modified sequence
+    modified_sequence = []
+    i = 0
+    while i < len(rna_sequence):
+        if start <= i <= end:
+            # We're inside the palindrome
+            if i < mid_point:
+                # First half - add 'P' for palindrome
+                modified_sequence.append('P')
+                # Skip to after the palindrome
+                i = end + 1
+            elif i == mid_point and length % 2 == 1:
+                # Center position for odd-length palindrome
+                modified_sequence.append(rna_sequence[i])
+                i += 1
+            else:
+                # Second half - skip (already represented by first half)
+                i = end + 1
+        else:
+            # Outside palindrome - add normally
+            modified_sequence.append(rna_sequence[i])
+            i += 1
+    
+    modified_sequence = ''.join(modified_sequence)
+    
+    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
 
-def print_symmetry_analysis(rna_sequence, symmetries):
-    """Helper function to print symmetry analysis in a readable format."""
-    print(f"\nSymmetry Analysis for: {rna_sequence}")
+def reduce_repeat_symmetry(bond_matrix, rna_sequence, repeat, repeat_factor=1.5):
+    """
+    Reduce problem by compressing repeated patterns into super-nodes.
     
-    if symmetries['palindromes']:
-        print("\nPalindromes found:")
-        for start, end, length in symmetries['palindromes']:
-            palindrome = rna_sequence[start:end+1]
-            print(f"  Positions {start}-{end} (length {length}): '{palindrome}'")
-    else:
-        print("\nNo palindromes found.")
+    Args:
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix.
+        rna_sequence (str):
+            The RNA sequence string.
+        repeat (tuple):
+            Repeat information (start1, end1, start2, end2, length).
+        repeat_factor (float):
+            Factor to multiply bond strengths for connections between repeats.
+            
+    Returns:
+        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
+    """
+    start1, end1, start2, end2, length = repeat
+    n = bond_matrix.shape[0]
     
-    if symmetries['repeats']:
-        print("\nDirect repeats found:")
-        for start1, end1, start2, end2, length in symmetries['repeats']:
-            repeat1 = rna_sequence[start1:end1+1]
-            repeat2 = rna_sequence[start2:end2+1]
-            print(f"  '{repeat1}' at positions {start1}-{end1} and '{repeat2}' at positions {start2}-{end2} (length {length})")
-    else:
-        print("\nNo direct repeats found.")
+    # Define the repeated regions
+    first_repeat = list(range(start1, end1 + 1))
+    second_repeat = list(range(start2, end2 + 1))
     
-    if symmetries['mirror_symmetries']:
-        print("\nMirror symmetries (complementary) found:")
-        for start, end, mirror_start, mirror_end, length in symmetries['mirror_symmetries']:
-            seq1 = rna_sequence[start:end+1]
-            seq2 = rna_sequence[mirror_start:mirror_end+1]
-            print(f"  '{seq1}' at positions {start}-{end} and '{seq2}' at positions {mirror_start}-{mirror_end} (length {length})")
-    else:
-        print("\nNo mirror symmetries found.")
+    # Create position mapping
+    position_mapping = {}
+    reverse_mapping = {}
+    new_pos = 0
+    
+    # Map positions before first repeat normally
+    for i in range(start1):
+        position_mapping[i] = new_pos
+        reverse_mapping[new_pos] = [i]
+        new_pos += 1
+    
+    # Map first repeat to a super-node
+    for pos in first_repeat:
+        position_mapping[pos] = new_pos
+    reverse_mapping[new_pos] = first_repeat
+    new_pos += 1
+    
+    # Map positions between repeats normally
+    for i in range(end1 + 1, start2):
+        position_mapping[i] = new_pos
+        reverse_mapping[new_pos] = [i]
+        new_pos += 1
+    
+    # Map second repeat to a super-node
+    for pos in second_repeat:
+        position_mapping[pos] = new_pos
+    reverse_mapping[new_pos] = second_repeat
+    new_pos += 1
+    
+    # Map positions after second repeat normally
+    for i in range(end2 + 1, n):
+        position_mapping[i] = new_pos
+        reverse_mapping[new_pos] = [i]
+        new_pos += 1
+    
+    # Create reduced matrix
+    reduced_size = new_pos
+    reduced_matrix = np.zeros((reduced_size, reduced_size), dtype=int)
+    
+    # Fill reduced matrix with bond strengths
+    for i_orig in range(n):
+        for j_orig in range(i_orig + 1, n):
+            if bond_matrix[i_orig, j_orig] > 0:
+                new_i, new_j = position_mapping[i_orig], position_mapping[j_orig]
+                if new_i != new_j:
+                    # Check if both positions are in repeat regions
+                    i_in_first_repeat = i_orig in first_repeat
+                    i_in_second_repeat = i_orig in second_repeat
+                    j_in_first_repeat = j_orig in first_repeat
+                    j_in_second_repeat = j_orig in second_repeat
+                    
+                    # Enhanced bond strength for connections between repeats
+                    bond_strength = bond_matrix[i_orig, j_orig]
+                    
+                    # If both positions are in different repeat regions, enhance bond strength
+                    if ((i_in_first_repeat and j_in_second_repeat) or 
+                        (i_in_second_repeat and j_in_first_repeat)):
+                        bond_strength = int(bond_strength * repeat_factor)
+                    
+                    reduced_matrix[min(new_i, new_j), max(new_i, new_j)] += bond_strength
+    
+    # Create modified sequence
+    modified_sequence = []
+    i = 0
+    while i < len(rna_sequence):
+        if start1 <= i <= end1:
+            # First repeat - add 'R' for repeat
+            modified_sequence.append('R')
+            i = end1 + 1
+        elif start2 <= i <= end2:
+            # Second repeat - add 'R' for repeat
+            modified_sequence.append('R')
+            i = end2 + 1
+        else:
+            # Outside repeats - add normally
+            modified_sequence.append(rna_sequence[i])
+            i += 1
+    
+    modified_sequence = ''.join(modified_sequence)
+    
+    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
+
+def reduce_mirror_symmetry(bond_matrix, rna_sequence, mirror_symmetry, complementarity_factor=2):
+    """
+    Reduce problem by merging complementary sequences into binding pair super-nodes.
+    
+    Args:
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix.
+        rna_sequence (str):
+            The RNA sequence string.
+        mirror_symmetry (tuple):
+            Mirror symmetry information (start, end, mirror_start, mirror_end, length).
+        complementarity_factor (int):
+            Factor to multiply bond strengths for complementary regions.
+            
+    Returns:
+        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
+    """
+    start, end, mirror_start, mirror_end, length = mirror_symmetry
+    n = bond_matrix.shape[0]
+    
+    # Define the complementary regions
+    first_region = list(range(start, end + 1))
+    second_region = list(range(mirror_start, mirror_end + 1))
+    
+    # Create position mapping
+    position_mapping = {}
+    reverse_mapping = {}
+    new_pos = 0
+    
+    # Map positions before first region normally
+    for i in range(start):
+        position_mapping[i] = new_pos
+        reverse_mapping[new_pos] = [i]
+        new_pos += 1
+    
+    # Map first complementary region to a super-node
+    for pos in first_region:
+        position_mapping[pos] = new_pos
+    reverse_mapping[new_pos] = first_region
+    new_pos += 1
+    
+    # Map positions between regions normally
+    for i in range(end + 1, mirror_start):
+        position_mapping[i] = new_pos
+        reverse_mapping[new_pos] = [i]
+        new_pos += 1
+    
+    # Map second complementary region to a super-node
+    for pos in second_region:
+        position_mapping[pos] = new_pos
+    reverse_mapping[new_pos] = second_region
+    new_pos += 1
+    
+    # Map positions after second region normally
+    for i in range(mirror_end + 1, n):
+        position_mapping[i] = new_pos
+        reverse_mapping[new_pos] = [i]
+        new_pos += 1
+    
+    # Create reduced matrix
+    reduced_size = new_pos
+    reduced_matrix = np.zeros((reduced_size, reduced_size), dtype=int)
+    
+    # Fill reduced matrix with bond strengths
+    for i_orig in range(n):
+        for j_orig in range(i_orig + 1, n):
+            if bond_matrix[i_orig, j_orig] > 0:
+                new_i, new_j = position_mapping[i_orig], position_mapping[j_orig]
+                if new_i != new_j:
+                    # Check if both positions are in complementary regions
+                    i_in_first_region = i_orig in first_region
+                    i_in_second_region = i_orig in second_region
+                    j_in_first_region = j_orig in first_region
+                    j_in_second_region = j_orig in second_region
+                    
+                    # Enhanced bond strength for complementary regions
+                    bond_strength = bond_matrix[i_orig, j_orig]
+                    
+                    # If both positions are in complementary regions, add strong binding
+                    if ((i_in_first_region and j_in_second_region) or 
+                        (i_in_second_region and j_in_first_region)):
+                        bond_strength = complementarity_factor * length
+                    
+                    reduced_matrix[min(new_i, new_j), max(new_i, new_j)] += bond_strength
+    
+    # Create modified sequence
+    modified_sequence = []
+    i = 0
+    while i < len(rna_sequence):
+        if start <= i <= end:
+            # First complementary region - add 'M' for mirror/complementary
+            modified_sequence.append('M')
+            i = end + 1
+        elif mirror_start <= i <= mirror_end:
+            # Second complementary region - add 'M' for mirror/complementary
+            modified_sequence.append('M')
+            i = mirror_end + 1
+        else:
+            # Outside complementary regions - add normally
+            modified_sequence.append(rna_sequence[i])
+            i += 1
+    
+    modified_sequence = ''.join(modified_sequence)
+    
+    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
 
 def symmetry_reduction(bond_matrix, rna_sequence, min_len=5):
     """
@@ -956,7 +1176,7 @@ def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, orig
     
     if modified_sequence:
         print(f"\nModified sequence: {modified_sequence}")
-        print("Note: 'x' marks merged positions")
+        print("Note: 'P' marks palindrome regions, 'R' marks repeat regions, 'M' marks mirror/complementary regions, 'x' marks other merged positions")
     
     print("\nPosition mapping (original -> new):")
     for orig_pos, new_pos in sorted(pos_mapping.items()):
@@ -984,6 +1204,134 @@ def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, orig
             else:
                 print(int(reduced_matrix[i][j]), end=' ')
         print()
+
+def find_sequence_symmetries(rna_sequence, min_symmetry_length=3):
+    """
+    Identifies different types of symmetries in the RNA sequence.
+    
+    Args:
+        rna_sequence (str): The RNA sequence string
+        min_symmetry_length (int): Minimum length for a symmetry to be considered
+        
+    Returns:
+        dict: Dictionary containing different types of symmetries found
+            - 'palindromes': List of palindrome positions (start, end, length)
+            - 'repeats': List of repeat positions (start1, end1, start2, end2, length)
+            - 'mirror_symmetries': List of mirror symmetry positions
+    """
+    n = len(rna_sequence)
+    symmetries = {
+        'palindromes': [],
+        'repeats': [],
+        'mirror_symmetries': []
+    }
+    
+    # 1. Find palindromes (sequences that read the same forward and backward)
+    all_palindromes = []
+    for start in range(n - min_symmetry_length + 1):
+        for length in range(min_symmetry_length, n - start + 1):
+            end = start + length - 1
+            if end >= n:
+                break
+                
+            # Check if this subsequence is a palindrome
+            is_palindrome = True
+            for i in range(length // 2):
+                if rna_sequence[start + i] != rna_sequence[end - i]:
+                    is_palindrome = False
+                    break
+            
+            if is_palindrome:
+                all_palindromes.append((start, end, length))
+    
+    # Filter to keep only maximal palindromes (non-nested)
+    symmetries['palindromes'] = []
+    for i, (start1, end1, length1) in enumerate(all_palindromes):
+        is_maximal = True
+        for j, (start2, end2, length2) in enumerate(all_palindromes):
+            if i != j:  # Don't compare with self
+                # Check if current palindrome is contained within another
+                if start2 <= start1 and end1 <= end2 and length2 > length1:
+                    is_maximal = False
+                    break
+        if is_maximal:
+            symmetries['palindromes'].append((start1, end1, length1))
+    
+    # 2. Find direct repeats (same sequence appearing multiple times)
+    for length in range(min_symmetry_length, n // 2 + 1):
+        for start1 in range(n - 2 * length + 1):
+            seq1 = rna_sequence[start1:start1 + length]
+            start2 = start1 + length
+            
+            # Look for the same sequence later in the string
+            for start2 in range(start1 + length, n - length + 1):
+                seq2 = rna_sequence[start2:start2 + length]
+                if seq1 == seq2:
+                    symmetries['repeats'].append((start1, start1 + length - 1, 
+                                                start2, start2 + length - 1, length))
+    
+    # 3. Find mirror symmetries (complementary sequences)
+    # A-T, G-C are complementary pairs
+    complement_map = {'a': 't', 't': 'a', 'g': 'c', 'c': 'g'}
+    
+    for start in range(n - min_symmetry_length + 1):
+        for length in range(min_symmetry_length, n - start + 1):
+            end = start + length - 1
+            if end >= n:
+                break
+                
+            # Look for the complementary sequence
+            for mirror_start in range(start + length, n - length + 1):
+                mirror_end = mirror_start + length - 1
+                is_complement = True
+                
+                for i in range(length):
+                    # Check if both positions have valid nucleotides
+                    if (rna_sequence[start + i] not in complement_map or 
+                        rna_sequence[mirror_start + length - 1 - i] not in complement_map):
+                        is_complement = False
+                        break
+                    
+                    # Check if they are complementary (reverse order for mirror)
+                    if rna_sequence[mirror_start + length - 1 - i] != complement_map[rna_sequence[start + i]]:
+                        is_complement = False
+                        break
+                
+                if is_complement:
+                    symmetries['mirror_symmetries'].append((start, end, mirror_start, mirror_end, length))
+                    break
+    
+    return symmetries
+
+def print_symmetry_analysis(rna_sequence, symmetries):
+    """Helper function to print symmetry analysis in a readable format."""
+    print(f"\nSymmetry Analysis for: {rna_sequence}")
+    
+    if symmetries['palindromes']:
+        print("\nMaximal palindromes found:")
+        for start, end, length in symmetries['palindromes']:
+            palindrome = rna_sequence[start:end+1]
+            print(f"  Positions {start}-{end} (length {length}): '{palindrome}'")
+    else:
+        print("\nNo palindromes found.")
+    
+    if symmetries['repeats']:
+        print("\nDirect repeats found:")
+        for start1, end1, start2, end2, length in symmetries['repeats']:
+            repeat1 = rna_sequence[start1:end1+1]
+            repeat2 = rna_sequence[start2:end2+1]
+            print(f"  '{repeat1}' at positions {start1}-{end1} and '{repeat2}' at positions {start2}-{end2} (length {length})")
+    else:
+        print("\nNo direct repeats found.")
+    
+    if symmetries['mirror_symmetries']:
+        print("\nMirror symmetries (complementary) found:")
+        for start, end, mirror_start, mirror_end, length in symmetries['mirror_symmetries']:
+            seq1 = rna_sequence[start:end+1]
+            seq2 = rna_sequence[mirror_start:mirror_end+1]
+            print(f"  '{seq1}' at positions {start}-{end} and '{seq2}' at positions {mirror_start}-{mirror_end} (length {length})")
+    else:
+        print("\nNo mirror symmetries found.")
 
 # Create command line functionality.
 DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'simple_pseudo.txt')
@@ -1026,40 +1374,90 @@ def main(path, verbose, min_stem, min_loop, c):
     # Test symmetry detection with sample data
     print("\n=== Testing symmetry detection with sample data ===")
     
-    # Sample 1: Simple palindrome
     sample1 = "atcgcta"
     print(f"\nSample 1: {sample1}")
     print("Expected: Palindrome at positions 0-6 (length 7)")
     symmetries1 = find_sequence_symmetries(sample1, min_symmetry_length=3)
     print_symmetry_analysis(sample1, symmetries1)
     
-    # Sample 2: Direct repeat
+    # Test palindrome symmetry reduction
+    print("\n=== Testing palindrome symmetry reduction ===")
+    
+    # Test with Sample 1 (simple palindrome)
+    print(f"\nTesting palindrome reduction on: {sample1}")
+    if symmetries1['palindromes']:
+        palindrome = symmetries1['palindromes'][0]  # Take the first palindrome
+        print(f"Reducing palindrome: {palindrome}")
+        
+        reduced_matrix, pos_mapping, reverse_mapping, modified_seq = reduce_palindrome_symmetry(
+            np.zeros((len(sample1), len(sample1)), dtype=int), sample1, palindrome
+        )
+        
+        print(f"Original sequence: {sample1}")
+        print(f"Modified sequence: {modified_seq}")
+        print(f"Original size: {len(sample1)}")
+        print(f"Reduced size: {reduced_matrix.shape[0]}")
+        print(f"Reduction: {len(sample1)} -> {reduced_matrix.shape[0]} nodes")
+        
+        print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, len(sample1), modified_seq)
+    else:
+        print("No palindromes found for reduction.")
+    
+    # Test repeat symmetry reduction
+    print("\n=== Testing repeat symmetry reduction ===")
+    
+    # Test with Sample 2 (direct repeat)
     sample2 = "atcgatcg"
-    print(f"\nSample 2: {sample2}")
-    print("Expected: Repeat 'atcg' at positions 0-3 and 4-7 (length 4)")
+    print(f"\nTesting repeat reduction on: {sample2}")
     symmetries2 = find_sequence_symmetries(sample2, min_symmetry_length=3)
     print_symmetry_analysis(sample2, symmetries2)
     
-    # Sample 3: Mirror symmetry (complementary)
-    sample3 = "atcgtagc"
-    print(f"\nSample 3: {sample3}")
-    print("Expected: Mirror symmetry 'atcg' and 'tagc' (complementary)")
-    symmetries3 = find_sequence_symmetries(sample3, min_symmetry_length=3)
-    print_symmetry_analysis(sample3, symmetries3)
+    if symmetries2['repeats']:
+        # Take the longest repeat
+        longest_repeat = max(symmetries2['repeats'], key=lambda x: x[4])
+        print(f"Reducing longest repeat: {longest_repeat}")
+        
+        reduced_matrix, pos_mapping, reverse_mapping, modified_seq = reduce_repeat_symmetry(
+            np.zeros((len(sample2), len(sample2)), dtype=int), sample2, longest_repeat
+        )
+        
+        print(f"Original sequence: {sample2}")
+        print(f"Modified sequence: {modified_seq}")
+        print(f"Original size: {len(sample2)}")
+        print(f"Reduced size: {reduced_matrix.shape[0]}")
+        print(f"Reduction: {len(sample2)} -> {reduced_matrix.shape[0]} nodes")
+        
+        print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, len(sample2), modified_seq)
+    else:
+        print("No repeats found for reduction.")
     
-    # Sample 4: Complex sequence with multiple symmetries
+    # Test mirror symmetry reduction
+    print("\n=== Testing mirror symmetry reduction ===")
+    
+    # Test with Sample 4 (has mirror symmetries)
     sample4 = "atcgctagctagc"
-    print(f"\nSample 4: {sample4}")
-    print("Expected: Multiple symmetries including palindromes and repeats")
+    print(f"\nTesting mirror symmetry reduction on: {sample4}")
     symmetries4 = find_sequence_symmetries(sample4, min_symmetry_length=3)
     print_symmetry_analysis(sample4, symmetries4)
     
-    # Sample 5: Real RNA-like sequence
-    sample5 = "aaagucgcugaagacuuaaaauucagg"
-    print(f"\nSample 5: {sample5}")
-    print("Expected: Various symmetries in realistic RNA sequence")
-    symmetries5 = find_sequence_symmetries(sample5, min_symmetry_length=3)
-    print_symmetry_analysis(sample5, symmetries5)
+    if symmetries4['mirror_symmetries']:
+        # Take the longest mirror symmetry
+        longest_mirror = max(symmetries4['mirror_symmetries'], key=lambda x: x[4])
+        print(f"Reducing longest mirror symmetry: {longest_mirror}")
+        
+        reduced_matrix, pos_mapping, reverse_mapping, modified_seq = reduce_mirror_symmetry(
+            np.zeros((len(sample4), len(sample4)), dtype=int), sample4, longest_mirror
+        )
+        
+        print(f"Original sequence: {sample4}")
+        print(f"Modified sequence: {modified_seq}")
+        print(f"Original size: {len(sample4)}")
+        print(f"Reduced size: {reduced_matrix.shape[0]}")
+        print(f"Reduction: {len(sample4)} -> {reduced_matrix.shape[0]} nodes")
+        
+        print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, len(sample4), modified_seq)
+    else:
+        print("No mirror symmetries found for reduction.")
     
     """
     #### Testing the reduction methods with hand made examples####
