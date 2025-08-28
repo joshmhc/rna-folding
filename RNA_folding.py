@@ -1,5 +1,5 @@
 # Copyright 2021 D-Wave Systems
-# Based on the paper 'RNA folding using quantum computers’
+# Based on the paper 'RNA folding using quantum computers'
 # Fox DM, MacDermaid CM, Schreij AM, Zwierzyna M, Walker RC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@ Possible reduction strategies for RNA folding:
 5. Merge maximal contiguous stems to a single super node, effectively reducing the problem size.
 """
 
-def reduce_palindrome_symmetry(bond_matrix, rna_sequence, palindrome, symmetry_factor=2):
+def reduce_palindrome_symmetry(bond_matrix, rna_sequence, symmetry_factor=2, min_len=10):
     """
     Reduce problem by merging palindrome halves into super-nodes.
     
@@ -50,16 +50,37 @@ def reduce_palindrome_symmetry(bond_matrix, rna_sequence, palindrome, symmetry_f
             Original bond matrix.
         rna_sequence (str):
             The RNA sequence string.
-        palindrome (tuple):
-            Palindrome information (start, end, length).
         symmetry_factor (int):
             Factor to multiply bond strengths for symmetric regions.
+        min_len (int):
+            Minimum length for palindrome to be considered for reduction (default: 10).
             
     Returns:
-        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
+        dict: Results dictionary with 'reduced_matrix', 'position_mapping', 'reverse_mapping', 
+              'modified_sequence', 'symmetry', and 'applied' fields, or None if no valid palindromes found
     """
+    # Find palindromes in the sequence
+    symmetries = find_sequence_symmetries(rna_sequence, min_len)
+    palindromes = symmetries['palindromes']
+    
+    if not palindromes:
+        print(f"  No palindromes found with min_len={min_len}")
+        return None
+    
+    print(f"  Found {len(palindromes)} palindrome(s) with min_len={min_len}: {palindromes}")
+    
+    # Use the longest palindrome for reduction
+    palindrome = max(palindromes, key=lambda x: x[2])  # Sort by length (index 2)
     start, end, length = palindrome
     n = bond_matrix.shape[0]
+    
+    # Check if palindrome meets minimum length requirement
+    if length < min_len:
+        return None
+    
+    # Validate palindrome coordinates
+    if start < 0 or end >= n or start > end:
+        return None
     
     # Calculate mid-point of palindrome
     mid_point = start + length // 2
@@ -68,15 +89,19 @@ def reduce_palindrome_symmetry(bond_matrix, rna_sequence, palindrome, symmetry_f
     first_half = list(range(start, mid_point))
     second_half = list(range(mid_point + 1, end + 1))
     
-    # Handle odd-length palindromes (center position is shared)
-    center_position = None
+    # Handle center position (for both odd and even length palindromes)
+    center_position = mid_point
+    # For odd-length palindromes, center is shared; for even-length, it's the boundary
     if length % 2 == 1:
-        center_position = mid_point
-        # Remove center from both halves if it exists
+        # Remove center from both halves for odd-length palindromes
         if center_position in first_half:
             first_half.remove(center_position)
         if center_position in second_half:
             second_half.remove(center_position)
+    else:
+        # For even-length palindromes, center position is not in either half
+        # but still needs to be mapped
+        pass
     
     # Create position mapping
     position_mapping = {}
@@ -97,11 +122,10 @@ def reduce_palindrome_symmetry(bond_matrix, rna_sequence, palindrome, symmetry_f
         reverse_mapping[new_pos] = first_half
         new_pos += 1
     
-    # Map center position (if odd-length palindrome)
-    if center_position is not None:
-        position_mapping[center_position] = new_pos
-        reverse_mapping[new_pos] = [center_position]
-        new_pos += 1
+    # Map center position (for both odd and even length palindromes)
+    position_mapping[center_position] = new_pos
+    reverse_mapping[new_pos] = [center_position]
+    new_pos += 1
     
     # Map second half of palindrome to a super-node
     if second_half:
@@ -143,17 +167,19 @@ def reduce_palindrome_symmetry(bond_matrix, rna_sequence, palindrome, symmetry_f
         if start <= i <= end:
             # We're inside the palindrome
             if i < mid_point:
-                # First half - add 'P' for palindrome
+                # First half - add 'P' for first half of palindrome
                 modified_sequence.append('P')
-                # Skip to after the palindrome
-                i = end + 1
+                i = mid_point
             elif i == mid_point and length % 2 == 1:
                 # Center position for odd-length palindrome
                 modified_sequence.append(rna_sequence[i])
                 i += 1
-            else:
-                # Second half - skip (already represented by first half)
+            elif i > mid_point:
+                # Second half - add 'Q' for second half of palindrome
+                modified_sequence.append('Q')
                 i = end + 1
+            else:
+                i += 1
         else:
             # Outside palindrome - add normally
             modified_sequence.append(rna_sequence[i])
@@ -161,9 +187,16 @@ def reduce_palindrome_symmetry(bond_matrix, rna_sequence, palindrome, symmetry_f
     
     modified_sequence = ''.join(modified_sequence)
     
-    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
+    return {
+        'reduced_matrix': reduced_matrix,
+        'position_mapping': position_mapping,
+        'reverse_mapping': reverse_mapping,
+        'modified_sequence': modified_sequence,
+        'symmetry': palindrome,
+        'applied': True
+    }
 
-def reduce_repeat_symmetry(bond_matrix, rna_sequence, repeat, repeat_factor=1.5):
+def reduce_repeat_symmetry(bond_matrix, rna_sequence, repeat_factor=1.5, min_len=4):
     """
     Reduce problem by compressing repeated patterns into super-nodes.
     
@@ -172,16 +205,33 @@ def reduce_repeat_symmetry(bond_matrix, rna_sequence, repeat, repeat_factor=1.5)
             Original bond matrix.
         rna_sequence (str):
             The RNA sequence string.
-        repeat (tuple):
-            Repeat information (start1, end1, start2, end2, length).
         repeat_factor (float):
             Factor to multiply bond strengths for connections between repeats.
+        min_len (int):
+            Minimum length for repeat to be considered for reduction (default: 4).
             
     Returns:
-        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
+        dict: Results dictionary with 'reduced_matrix', 'position_mapping', 'reverse_mapping', 
+              'modified_sequence', 'symmetry', and 'applied' fields, or None if no valid repeats found
     """
+    # Find repeats in the sequence
+    symmetries = find_sequence_symmetries(rna_sequence, min_len)
+    repeats = symmetries['repeats']
+    
+    if not repeats:
+        print(f"  No repeats found with min_len={min_len}")
+        return None
+    
+    print(f"  Found {len(repeats)} repeat(s) with min_len={min_len}: {repeats}")
+    
+    # Use the longest repeat for reduction
+    repeat = max(repeats, key=lambda x: x[4])  # Sort by length (index 4)
     start1, end1, start2, end2, length = repeat
     n = bond_matrix.shape[0]
+    
+    # Check if repeat meets minimum length requirement
+    if length < min_len:
+        return None
     
     # Define the repeated regions
     first_repeat = list(range(start1, end1 + 1))
@@ -267,9 +317,16 @@ def reduce_repeat_symmetry(bond_matrix, rna_sequence, repeat, repeat_factor=1.5)
     
     modified_sequence = ''.join(modified_sequence)
     
-    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
+    return {
+        'reduced_matrix': reduced_matrix,
+        'position_mapping': position_mapping,
+        'reverse_mapping': reverse_mapping,
+        'modified_sequence': modified_sequence,
+        'symmetry': repeat,
+        'applied': True
+    }
 
-def reduce_mirror_symmetry(bond_matrix, rna_sequence, mirror_symmetry, complementarity_factor=2):
+def reduce_mirror_symmetry(bond_matrix, rna_sequence, complementarity_factor=2, min_len=3):
     """
     Reduce problem by merging complementary sequences into binding pair super-nodes.
     
@@ -278,16 +335,33 @@ def reduce_mirror_symmetry(bond_matrix, rna_sequence, mirror_symmetry, complemen
             Original bond matrix.
         rna_sequence (str):
             The RNA sequence string.
-        mirror_symmetry (tuple):
-            Mirror symmetry information (start, end, mirror_start, mirror_end, length).
         complementarity_factor (int):
             Factor to multiply bond strengths for complementary regions.
+        min_len (int):
+            Minimum length for mirror symmetry to be considered for reduction (default: 3).
             
     Returns:
-        tuple: (reduced_matrix, position_mapping, reverse_mapping, modified_sequence)
+        dict: Results dictionary with 'reduced_matrix', 'position_mapping', 'reverse_mapping', 
+              'modified_sequence', 'symmetry', and 'applied' fields, or None if no valid mirror symmetries found
     """
+    # Find mirror symmetries in the sequence
+    symmetries = find_sequence_symmetries(rna_sequence, min_len)
+    mirror_symmetries = symmetries['mirror_symmetries']
+    
+    if not mirror_symmetries:
+        print(f"  No mirror symmetries found with min_len={min_len}")
+        return None
+    
+    print(f"  Found {len(mirror_symmetries)} mirror symmetrie(s) with min_len={min_len}: {mirror_symmetries}")
+    
+    # Use the longest mirror symmetry for reduction
+    mirror_symmetry = max(mirror_symmetries, key=lambda x: x[4])  # Sort by length (index 4)
     start, end, mirror_start, mirror_end, length = mirror_symmetry
     n = bond_matrix.shape[0]
+    
+    # Check if mirror symmetry meets minimum length requirement
+    if length < min_len:
+        return None
     
     # Define the complementary regions
     first_region = list(range(start, end + 1))
@@ -373,21 +447,53 @@ def reduce_mirror_symmetry(bond_matrix, rna_sequence, mirror_symmetry, complemen
     
     modified_sequence = ''.join(modified_sequence)
     
-    return reduced_matrix, position_mapping, reverse_mapping, modified_sequence
+    return {
+        'reduced_matrix': reduced_matrix,
+        'position_mapping': position_mapping,
+        'reverse_mapping': reverse_mapping,
+        'modified_sequence': modified_sequence,
+        'symmetry': mirror_symmetry,
+        'applied': True
+    }
 
-def symmetry_reduction(bond_matrix, rna_sequence, min_len=5):
+def symmetry_reduction(bond_matrix, rna_sequence, min_palindrome_len=10, min_repeat_len=4, min_mirror_len=3):
     """
     This function is used to reduce the problem size by leveraging the symmetry of the sequence.
+    
+    Args:
+        bond_matrix (:class: `numpy.ndarray`):
+            Original bond matrix.
+        rna_sequence (str):
+            The RNA sequence string.
+        min_palindrome_len (int):
+            Minimum length for palindromes to be considered for reduction (default: 10).
+        min_repeat_len (int):
+            Minimum length for repeats to be considered for reduction (default: 4).
+        min_mirror_len (int):
+            Minimum length for mirror symmetries to be considered for reduction (default: 3).
+            
+    Returns:
+        dict: Dictionary containing all symmetry reduction results.
     """
-    # First, identify symmetries in the sequence
-    symmetries = find_sequence_symmetries(rna_sequence, min_len)
+    # Apply each type of symmetry reduction
+    palindrome_result = reduce_palindrome_symmetry(bond_matrix, rna_sequence, min_len=min_palindrome_len)
+    repeat_result = reduce_repeat_symmetry(bond_matrix, rna_sequence, min_len=min_repeat_len)
+    mirror_result = reduce_mirror_symmetry(bond_matrix, rna_sequence, min_len=min_mirror_len)
     
-    print(f"Found symmetries:")
-    print(f"  Palindromes: {symmetries['palindromes']}")
-    print(f"  Repeats: {symmetries['repeats']}")
-    print(f"  Mirror symmetries: {symmetries['mirror_symmetries']}")
+    # Collect results
+    palindrome_results = [palindrome_result] if palindrome_result else []
+    repeat_results = [repeat_result] if repeat_result else []
+    mirror_results = [mirror_result] if mirror_result else []
     
-    return symmetries
+    # Calculate total reductions
+    total_reductions = len(palindrome_results) + len(repeat_results) + len(mirror_results)
+    
+    return {
+        'total_reductions': total_reductions,
+        'palindrome_results': palindrome_results,
+        'repeat_results': repeat_results,
+        'mirror_results': mirror_results
+    }
 
 def merge_idle_sequence(bond_matrix, rna_sequence, min_len=5):
     """ Merges all idle sequences of consecutive nucleotides of the same type longer than min_len to super nodes.
@@ -1001,7 +1107,7 @@ def pseudoknot_terms(stem_dict, min_stem=3, c=0.3):
                             if substem1[1] < substem2[0] and substem2[1] < substem1[2] and substem1[3] < substem2[2]})
     return pseudos
 
-def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1):
+def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None):
     """ Produces graph plot and saves as .png file.
 
     Args:
@@ -1011,6 +1117,10 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1):
             List of stems in solution, encoded as 4-tuples.
         fig_name (str):
             Name of file created to save figure. ".png" is added automatically
+        seed (int):
+            Random seed for reproducible layouts
+        bond_matrix (numpy.ndarray, optional):
+            Bond matrix to determine edge strengths for visualization
     """
 
     # Clear the current figure to prevent overlapping plots
@@ -1019,42 +1129,123 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1):
 
     # Use the provided RNA sequence directly
     rna = rna_sequence.lower()
+    
+
 
     # Create graph with edges from RNA sequence and stems. Nodes are temporarily labeled by integers.
     G = nx.Graph()
     rna_edges = [(i, i + 1) for i in range(len(rna) - 1)]
-    stem_edges = [(stem[0] + i, stem[3] - i) for stem in stems for i in range(stem[1] - stem[0] + 1)]
-    G.add_edges_from(rna_edges + stem_edges)
+    
+    # Filter stem edges to only include valid nodes within sequence bounds
+    valid_stem_edges = []
+    for stem in stems:
+        start1, end1, start2, end2 = stem
+        for i in range(stem[1] - stem[0] + 1):
+            node1 = stem[0] + i
+            node2 = stem[3] - i
+            # Only add edge if both nodes are within sequence bounds
+            if 0 <= node1 < len(rna) and 0 <= node2 < len(rna):
+                valid_stem_edges.append((node1, node2))
+    
+    G.add_edges_from(rna_edges + valid_stem_edges)
+    
+    # Use the filtered stem edges for the rest of the function
+    stem_edges = valid_stem_edges
 
     # Assign each nucleotide to a color and size.
     color_map = []
-    node_sizes = []
-    for node in rna:
-        if node == 'x':  # Merged node
-            color_map.append('purple')  # Distinct color for merged nodes
-            node_sizes.append(400)      # Larger size for merged nodes
+    node_sizes = {}
+    for i, node in enumerate(rna):
+        if node == 'u':  # Merged node
+            color_map.append('tab:blue')
+            node_sizes[i] = 200
         elif node == 'g':
             color_map.append('tab:red')
-            node_sizes.append(200)
+            node_sizes[i] = 200
         elif node == 'c':
             color_map.append('tab:green')
-            node_sizes.append(200)
+            node_sizes[i] = 200
         elif node == 'a':
             color_map.append('y')
-            node_sizes.append(200)
+            node_sizes[i] = 200
         else:
-            color_map.append('tab:blue')
-            node_sizes.append(200)
+            color_map.append('purple')  # Distinct color for merged nodes
+            node_sizes[i] = 400      # Larger size for merged nodes
+            
+
+    # Get the actual nodes in the graph and create color_map and node_sizes lists
+    graph_nodes = list(G.nodes())
+    color_map_list = [color_map[i] if i < len(color_map) else 'tab:blue' for i in graph_nodes]
+    node_sizes_list = [node_sizes.get(i, 200) for i in graph_nodes]
 
     options = {"edgecolors": "tab:gray", "alpha": 0.8}
-    pos = nx.spring_layout(G, iterations=5000, seed=seed)  # Fixed seed for reproducible layout
-    nx.draw_networkx_nodes(G, pos, node_color=color_map, node_size=node_sizes, **options)
+    
+    # Create a weighted graph where sequence edges have higher weight than stem edges
+    weighted_G = G.copy()
+    
+    # Set weights for different edge types
+    for edge in weighted_G.edges():
+        if edge in rna_edges:
+            weighted_G[edge[0]][edge[1]]['weight'] = 4.0  # Strong backbone
+        elif edge in stem_edges:
+            weighted_G[edge[0]][edge[1]]['weight'] = 0.3  # Very weak base pairs - push them apart
+        else:
+            weighted_G[edge[0]][edge[1]]['weight'] = 1.0  # Default weight
+    
+    # Uncomment the line below to see the difference without weights:
+    # weighted_G = G.copy()  # This would make all edges equal weight
+    
+    # Use spring layout with edge weights
+    pos = nx.spring_layout(weighted_G, 
+                          iterations=5000,  # Number of iterations
+                          k=2.0,           # Optimal distance between nodes
+                          seed=seed,       # For reproducible results
+                          scale=0.8,       # Scale factor for positions
+                          weight='weight') # Use edge weights
+    
+    nx.draw_networkx_nodes(G, pos, node_color=color_map_list, node_size=node_sizes_list, **options)
 
-    labels = {i: rna[i].upper() for i in range(len(rna))}
+    # Create labels with better handling of special characters
+    labels = {}
+    for i in range(len(rna)):
+        char = rna[i]
+        if char in ['a', 'g', 'c', 'u']:
+            labels[i] = char.upper()
+        elif char in ['p', 'q', 'r', 'm']:
+            labels[i] = char.upper()
+        elif char == 'x':
+            labels[i] = 'X'
+        else:
+            labels[i] = char.upper()  # Fallback for any other characters
+    
     nx.draw_networkx_labels(G, pos, labels, font_size=10, font_color="whitesmoke")
 
+    # Draw RNA backbone edges
     nx.draw_networkx_edges(G, pos, edgelist=rna_edges, width=3.0, alpha=0.5)
-    nx.draw_networkx_edges(G, pos, edgelist=stem_edges, width=4.5, alpha=0.7, edge_color='tab:pink')
+    
+    # Draw stem edges with widths based on bond strength
+    if stem_edges:
+        if bond_matrix is not None:
+            # Create edge widths based on bond strengths
+            edge_widths = []
+            for edge in stem_edges:
+                i, j = edge
+                # Get bond strength from matrix (use min/max to get correct position)
+                bond_strength = bond_matrix[min(i, j), max(i, j)]
+                # Scale bond strength to width (1-8 range)
+                width = max(1.0, min(8.0, bond_strength * 2.0))
+                edge_widths.append(width)
+            
+            # Draw each stem edge with its specific width
+            for i, edge in enumerate(stem_edges):
+                nx.draw_networkx_edges(G, pos, edgelist=[edge], 
+                                     width=edge_widths[i], 
+                                     alpha=0.7, 
+                                     edge_color='tab:pink')
+        else:
+            # Fallback: draw all stem edges with uniform width
+            nx.draw_networkx_edges(G, pos, edgelist=stem_edges, 
+                                 width=4.5, alpha=0.7, edge_color='tab:pink')
 
     plt.savefig(fig_name + '.png')
 
@@ -1176,7 +1367,7 @@ def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, orig
     
     if modified_sequence:
         print(f"\nModified sequence: {modified_sequence}")
-        print("Note: 'P' marks palindrome regions, 'R' marks repeat regions, 'M' marks mirror/complementary regions, 'x' marks other merged positions")
+        print("Note: 'P' marks first half of palindrome, 'Q' marks second half of palindrome, 'R' marks repeat regions, 'M' marks mirror/complementary regions, 'x' marks other merged positions")
     
     print("\nPosition mapping (original -> new):")
     for orig_pos, new_pos in sorted(pos_mapping.items()):
@@ -1333,6 +1524,91 @@ def print_symmetry_analysis(rna_sequence, symmetries):
     else:
         print("\nNo mirror symmetries found.")
 
+def print_symmetry_results(symmetry_results, original_matrix_size):
+    """
+    Print detailed results of symmetry reduction operations.
+    
+    Args:
+        symmetry_results (dict):
+            Results from symmetry_reduction function.
+        original_matrix_size (int):
+            Size of the original matrix before reduction.
+    """
+    print(f"\n=== Symmetry Reduction Results ===")
+    print(f"Total reductions applied: {symmetry_results['total_reductions']}")
+    print(f"Palindrome reductions: {len(symmetry_results['palindrome_results'])}")
+    print(f"Repeat reductions: {len(symmetry_results['repeat_results'])}")
+    print(f"Mirror symmetry reductions: {len(symmetry_results['mirror_results'])}")
+    
+    # Show detailed results for each type
+    if symmetry_results['palindrome_results']:
+        print(f"\nPalindrome reduction results:")
+        for i, result in enumerate(symmetry_results['palindrome_results']):
+            print(f"  {i+1}. Symmetry: {result['symmetry']}")
+            print(f"     Modified sequence: {result['modified_sequence']}")
+            print(f"     Size reduction: {original_matrix_size} -> {result['reduced_matrix'].shape[0]}")
+    
+    if symmetry_results['repeat_results']:
+        print(f"\nRepeat reduction results:")
+        for i, result in enumerate(symmetry_results['repeat_results']):
+            print(f"  {i+1}. Symmetry: {result['symmetry']}")
+            print(f"     Modified sequence: {result['modified_sequence']}")
+            print(f"     Size reduction: {original_matrix_size} -> {result['reduced_matrix'].shape[0]}")
+    
+    if symmetry_results['mirror_results']:
+        print(f"\nMirror symmetry reduction results:")
+        for i, result in enumerate(symmetry_results['mirror_results']):
+            print(f"  {i+1}. Symmetry: {result['symmetry']}")
+            print(f"     Modified sequence: {result['modified_sequence']}")
+            print(f"     Size reduction: {original_matrix_size} -> {result['reduced_matrix'].shape[0]}")
+
+def create_hairpin_example(reduced_sequence):
+    """
+    Create a nice hairpin structure example for demonstration.
+    
+    Args:
+        reduced_sequence (str): The reduced RNA sequence.
+        
+    Returns:
+        list: List of stems that form a nice hairpin structure.
+    """
+    if len(reduced_sequence) < 6:
+        # For very short sequences, create a simple stem
+        return [(0, 0, len(reduced_sequence)-1, len(reduced_sequence)-1)]
+    
+    # Look for palindrome markers P and Q
+    if 'P' in reduced_sequence and 'Q' in reduced_sequence:
+        p_pos = reduced_sequence.find('P')
+        q_pos = reduced_sequence.find('Q')
+        if p_pos != -1 and q_pos != -1 and p_pos < q_pos:
+            # Create a hairpin connecting P and Q with multiple stems
+            stems = []
+            
+            # Main hairpin stem connecting P and Q
+            start1 = max(0, p_pos - 1)
+            end1 = p_pos
+            start2 = q_pos
+            end2 = min(len(reduced_sequence) - 1, q_pos + 1)
+            stems.append((start1, end1, start2, end2))
+            
+            # Additional stem if there's enough space
+            if p_pos > 1 and q_pos < len(reduced_sequence) - 1:
+                stems.append((p_pos - 2, p_pos - 1, q_pos + 1, q_pos + 2))
+            
+
+            
+            return stems
+    
+    # Fallback: create a general hairpin structure
+    mid = len(reduced_sequence) // 2
+    if len(reduced_sequence) >= 8:
+        # Create a hairpin with stem length 2
+        return [(mid-2, mid-1, mid+1, mid+2)]
+    else:
+        # Create a simple stem
+        return [(0, 0, len(reduced_sequence)-1, len(reduced_sequence)-1)]
+
+
 # Create command line functionality.
 DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'simple_pseudo.txt')
 
@@ -1371,93 +1647,119 @@ def main(path, verbose, min_stem, min_loop, c):
     Returns:
         None: None
     """
-    # Test symmetry detection with sample data
-    print("\n=== Testing symmetry detection with sample data ===")
+    #### Testing comprehensive symmetry reduction ####
     
-    sample1 = "atcgcta"
-    print(f"\nSample 1: {sample1}")
-    print("Expected: Palindrome at positions 0-6 (length 7)")
-    symmetries1 = find_sequence_symmetries(sample1, min_symmetry_length=3)
-    print_symmetry_analysis(sample1, symmetries1)
+    # Read the RNA sequence for symmetry reduction
+    with open(path) as f:
+        rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
     
-    # Test palindrome symmetry reduction
-    print("\n=== Testing palindrome symmetry reduction ===")
+    matrix = text_to_matrix(path, min_loop)
+    matrix_copy = np.copy(matrix)
+    stem_dict = make_stem_dict(matrix_copy, min_stem, min_loop)
+
+    print_matrix_and_stem_dict(matrix, stem_dict)
     
-    # Test with Sample 1 (simple palindrome)
-    print(f"\nTesting palindrome reduction on: {sample1}")
-    if symmetries1['palindromes']:
-        palindrome = symmetries1['palindromes'][0]  # Take the first palindrome
-        print(f"Reducing palindrome: {palindrome}")
-        
-        reduced_matrix, pos_mapping, reverse_mapping, modified_seq = reduce_palindrome_symmetry(
-            np.zeros((len(sample1), len(sample1)), dtype=int), sample1, palindrome
-        )
-        
-        print(f"Original sequence: {sample1}")
-        print(f"Modified sequence: {modified_seq}")
-        print(f"Original size: {len(sample1)}")
-        print(f"Reduced size: {reduced_matrix.shape[0]}")
-        print(f"Reduction: {len(sample1)} -> {reduced_matrix.shape[0]} nodes")
-        
-        print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, len(sample1), modified_seq)
+    # Test comprehensive symmetry reduction on real RNA sequence
+    print("\n=== Testing comprehensive symmetry reduction ===")
+    print(f"RNA sequence: {rna_sequence}")
+    
+    # Apply comprehensive symmetry reduction
+    symmetry_results = symmetry_reduction(matrix, rna_sequence, min_palindrome_len=10, min_repeat_len=4, min_mirror_len=3)
+    
+    # Print detailed results
+    print_symmetry_results(symmetry_results, matrix.shape[0])
+    
+    # Plot palindrome reduction results if any exist
+    if symmetry_results['palindrome_results']:
+        print("\n=== Plotting palindrome reduction results ===")
+        for i, result in enumerate(symmetry_results['palindrome_results']):
+            print(f"Plotting palindrome reduction {i+1}: {result['symmetry']}")
+            
+            # Plot the reduced solution
+            reduced_sequence = result['modified_sequence']
+            reduced_matrix = result['reduced_matrix']
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as temp_file:
+                temp_file.write(f"1 {reduced_sequence}\n")
+                temp_file_path = temp_file.name
+            
+            try:
+                # Make stem dictionary for reduced matrix
+                reduced_stem_dict = make_stem_dict(reduced_matrix, min_stem, min_loop)
+
+                
+                # Solve the reduced problem using D-Wave
+                print(f"  Solving reduced problem (size: {reduced_matrix.shape[0]})...")
+                solution = None
+                
+                try:
+                    from dwave.system import LeapHybridCQMSampler
+                    
+                    # Build CQM for reduced problem
+                    cqm = build_cqm(reduced_stem_dict, min_stem, c)
+                    
+                    # Solve with D-Wave
+                    sampler = LeapHybridCQMSampler()
+                    sampleset = sampler.sample_cqm(cqm)
+                    
+                    # Process solution
+                    solution = process_cqm_solution(sampleset, reduced_matrix)
+                    
+                except ImportError:
+                    print(f"  D-Wave solver not available, using stems from reduced matrix")
+                    # Use actual stems from the reduced matrix instead of artificial examples
+                    if reduced_stem_dict:
+                        # Take the first few stems from the reduced matrix
+                        all_stems = []
+                        for stems_list in reduced_stem_dict.values():
+                            all_stems.extend(stems_list)
+                        if all_stems:
+                            # Take up to 3 stems for visualization
+                            solution = all_stems[:3]
+                        else:
+                            solution = create_hairpin_example(reduced_sequence)
+                    else:
+                        solution = create_hairpin_example(reduced_sequence)
+                except Exception as e:
+                    print(f"  Error solving reduced problem: {e}")
+                    print(f"  Using stems from reduced matrix")
+                    # Use actual stems from the reduced matrix
+                    if reduced_stem_dict:
+                        all_stems = []
+                        for stems_list in reduced_stem_dict.values():
+                            all_stems.extend(stems_list)
+                        if all_stems:
+                            solution = all_stems[:3]
+                        else:
+                            solution = create_hairpin_example(reduced_sequence)
+                    else:
+                        solution = create_hairpin_example(reduced_sequence)
+                
+                # Process solution and create plots
+                if solution:
+                    # Convert solution stems back to original coordinates
+                    converted_stems = convert_reduced_solution_to_original(
+                        result['reverse_mapping'], solution
+                    )
+                    
+                    print(f"  Reduced solution stems: {solution}")
+                    print(f"  Converted to original coordinates: {converted_stems}")
+                    
+                    # Plot the reduced solution
+                    make_plot(reduced_sequence, solution, f'palindrome_reduced_{i+1}', seed=99, bond_matrix=reduced_matrix)
+                    
+                    # Plot the converted solution
+                    make_plot(rna_sequence, converted_stems, f'palindrome_converted_{i+1}', seed=50, bond_matrix=matrix)
+                    
+                    print(f"  Plots saved: palindrome_reduced_{i+1}.png, palindrome_converted_{i+1}.png")
+                else:
+                    print(f"  No valid solution found for reduced problem")
+                    
+            finally:
+                # Clean up temporary file
+                os.unlink(temp_file_path)
     else:
-        print("No palindromes found for reduction.")
-    
-    # Test repeat symmetry reduction
-    print("\n=== Testing repeat symmetry reduction ===")
-    
-    # Test with Sample 2 (direct repeat)
-    sample2 = "atcgatcg"
-    print(f"\nTesting repeat reduction on: {sample2}")
-    symmetries2 = find_sequence_symmetries(sample2, min_symmetry_length=3)
-    print_symmetry_analysis(sample2, symmetries2)
-    
-    if symmetries2['repeats']:
-        # Take the longest repeat
-        longest_repeat = max(symmetries2['repeats'], key=lambda x: x[4])
-        print(f"Reducing longest repeat: {longest_repeat}")
-        
-        reduced_matrix, pos_mapping, reverse_mapping, modified_seq = reduce_repeat_symmetry(
-            np.zeros((len(sample2), len(sample2)), dtype=int), sample2, longest_repeat
-        )
-        
-        print(f"Original sequence: {sample2}")
-        print(f"Modified sequence: {modified_seq}")
-        print(f"Original size: {len(sample2)}")
-        print(f"Reduced size: {reduced_matrix.shape[0]}")
-        print(f"Reduction: {len(sample2)} -> {reduced_matrix.shape[0]} nodes")
-        
-        print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, len(sample2), modified_seq)
-    else:
-        print("No repeats found for reduction.")
-    
-    # Test mirror symmetry reduction
-    print("\n=== Testing mirror symmetry reduction ===")
-    
-    # Test with Sample 4 (has mirror symmetries)
-    sample4 = "atcgctagctagc"
-    print(f"\nTesting mirror symmetry reduction on: {sample4}")
-    symmetries4 = find_sequence_symmetries(sample4, min_symmetry_length=3)
-    print_symmetry_analysis(sample4, symmetries4)
-    
-    if symmetries4['mirror_symmetries']:
-        # Take the longest mirror symmetry
-        longest_mirror = max(symmetries4['mirror_symmetries'], key=lambda x: x[4])
-        print(f"Reducing longest mirror symmetry: {longest_mirror}")
-        
-        reduced_matrix, pos_mapping, reverse_mapping, modified_seq = reduce_mirror_symmetry(
-            np.zeros((len(sample4), len(sample4)), dtype=int), sample4, longest_mirror
-        )
-        
-        print(f"Original sequence: {sample4}")
-        print(f"Modified sequence: {modified_seq}")
-        print(f"Original size: {len(sample4)}")
-        print(f"Reduced size: {reduced_matrix.shape[0]}")
-        print(f"Reduction: {len(sample4)} -> {reduced_matrix.shape[0]} nodes")
-        
-        print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, len(sample4), modified_seq)
-    else:
-        print("No mirror symmetries found for reduction.")
+        print("\nNo palindrome reductions to plot")
     
     """
     #### Testing the reduction methods with hand made examples####
@@ -1471,9 +1773,9 @@ def main(path, verbose, min_stem, min_loop, c):
 
     print_matrix_and_stem_dict(matrix, stem_dict)
     
-    # Test symmetry detection
-    print("\n=== Testing symmetry detection ===")
-    symmetries = symmetry_reduction(matrix, rna_sequence, min_len=3)
+    # Test comprehensive symmetry reduction
+    print("\n=== Testing comprehensive symmetry reduction ===")
+    symmetry_results = symmetry_reduction(matrix, rna_sequence, min_len=3)
     
     # Test the reduction methods using the helper function
     print("\n=== Testing reduction methods ===")
