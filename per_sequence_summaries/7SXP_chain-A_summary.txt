@@ -1,0 +1,5 @@
+> 7SXP | chain: A | length: 22
+sequence: UGUGGGAUGGGCGGGUCUGGGA
+dbn:      .(..((...)).((....)).)
+pairs_count: 5
+paired_indices: (2,22) (5,10) (6,11) (13,19) (14,20)

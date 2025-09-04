@@ -1,0 +1,5 @@
+> 7D82 | chain: A | length: 50
+sequence: GGUUUCAACAUCCCCGUUCGGCGCUCGAAAGAGGUGGCCGGACUGAAGCC
+dbn:      (((((((........(((((((.((((..))).)..))))))))))))))
+pairs_count: 18
+paired_indices: (1,50) (2,49) (3,48) (4,47) (5,46) (6,45) (7,44) (16,43) (17,42) (18,41) (19,40) (20,39) (21,38) (22,37) (24,34) (25,32) (26,31) (27,30)

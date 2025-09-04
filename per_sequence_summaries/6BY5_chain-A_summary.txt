@@ -1,0 +1,5 @@
+> 6BY5 | chain: A | length: 14
+sequence: GGCACUUCGGUGCC
+dbn:      (((.(....).)))
+pairs_count: 4
+paired_indices: (1,14) (2,13) (3,12) (5,10)

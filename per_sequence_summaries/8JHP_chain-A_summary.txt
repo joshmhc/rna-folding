@@ -1,0 +1,5 @@
+> 8JHP | chain: A | length: 27
+sequence: ACUCGAAAGAACAUGUUUUCCAAGAGU
+dbn:      ((((((..((((..)..))).))))))
+pairs_count: 10
+paired_indices: (1,27) (2,26) (3,25) (4,24) (5,23) (6,22) (9,20) (10,19) (11,18) (12,15)

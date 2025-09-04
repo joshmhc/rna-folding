@@ -1,0 +1,5 @@
+> 1ESH | chain: A | length: 13
+sequence: GGUGCAUAGCACC
+dbn:      ((((((.))))))
+pairs_count: 6
+paired_indices: (1,13) (2,12) (3,11) (4,10) (5,9) (6,8)

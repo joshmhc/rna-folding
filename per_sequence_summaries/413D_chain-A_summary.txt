@@ -1,0 +1,5 @@
+> 413D | chain: A | length: 13
+sequence: UGAGCUUCGGCUC
+dbn:      .(((((())))))
+pairs_count: 6
+paired_indices: (2,13) (3,12) (4,11) (5,10) (6,9) (7,8)

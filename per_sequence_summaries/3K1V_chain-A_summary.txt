@@ -1,0 +1,5 @@
+> 3K1V | chain: A | length: 34
+sequence: AGAGGUUCUAGCACAUCCCUCUAUAAAAAACUAA
+dbn:      (((((((((((......)))))......))))))
+pairs_count: 11
+paired_indices: (1,22) (2,21) (3,20) (4,19) (5,18) (6,29) (7,30) (8,34) (9,33) (10,32) (11,31)

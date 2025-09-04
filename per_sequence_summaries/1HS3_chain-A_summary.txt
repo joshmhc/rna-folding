@@ -1,0 +1,5 @@
+> 1HS3 | chain: A | length: 13
+sequence: GCGUUAAUUCGCA
+dbn:      ((((....)))).
+pairs_count: 4
+paired_indices: (1,12) (2,11) (3,10) (4,9)

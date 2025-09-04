@@ -1,0 +1,5 @@
+> 1OSU | chain: A | length: 6
+sequence: UUCGCG
+dbn:      ..(())
+pairs_count: 2
+paired_indices: (3,6) (4,5)

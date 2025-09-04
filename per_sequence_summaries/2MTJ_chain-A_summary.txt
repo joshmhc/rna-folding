@@ -1,0 +1,5 @@
+> 2MTJ | chain: A | length: 47
+sequence: GGACCUCCCGUCCUUGGACGGUCGAGCGAAAGCUUGUGAUUGGUCCG
+dbn:      (((((((((((((..))))))).(((((..))))).....)))))).
+pairs_count: 18
+paired_indices: (1,46) (2,45) (3,44) (4,43) (5,42) (6,41) (7,22) (8,21) (9,20) (10,19) (11,18) (12,17) (13,16) (24,35) (25,34) (26,33) (27,32) (28,31)

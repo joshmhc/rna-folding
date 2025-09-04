@@ -1,0 +1,5 @@
+> 1LU3 | chain: A | length: 17
+sequence: GCCAGACUGAAGAUCUG
+dbn:      ..((((.......))))
+pairs_count: 4
+paired_indices: (3,17) (4,16) (5,15) (6,14)

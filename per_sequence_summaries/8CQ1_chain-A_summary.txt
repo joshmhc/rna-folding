@@ -1,0 +1,5 @@
+> 8CQ1 | chain: A | length: 44
+sequence: GGGUGUGGCUGUCACUCGGCUGCAUGCUUAGUGCACUCACGCCC
+dbn:      ((((((((.((.((((((((.....)))))))))).))))))))
+pairs_count: 18
+paired_indices: (1,44) (2,43) (3,42) (4,41) (5,40) (6,39) (7,38) (8,37) (10,35) (11,34) (13,33) (14,32) (15,31) (16,30) (17,29) (18,28) (19,27) (20,26)

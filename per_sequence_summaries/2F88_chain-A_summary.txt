@@ -1,0 +1,5 @@
+> 2F88 | chain: A | length: 34
+sequence: GAGCCGUGUGCGAUGAAAGUCGCAAGCACGGUUC
+dbn:      ((((((((.(((((....)))))...))))))))
+pairs_count: 13
+paired_indices: (1,34) (2,33) (3,32) (4,31) (5,30) (6,29) (7,28) (8,27) (10,23) (11,22) (12,21) (13,20) (14,19)

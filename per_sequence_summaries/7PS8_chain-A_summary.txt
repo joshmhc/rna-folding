@@ -1,0 +1,5 @@
+> 7PS8 | chain: A | length: 23
+sequence: CAGGGAGGUGUGGCCUGGGCGGG
+dbn:      .(((..((.......)))(.)))
+pairs_count: 6
+paired_indices: (2,16) (3,21) (4,22) (7,17) (8,18) (19,23)

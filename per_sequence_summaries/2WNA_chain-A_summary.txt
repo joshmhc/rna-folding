@@ -1,0 +1,5 @@
+> 2WNA | chain: A | length: 6
+sequence: NNNNNN
+dbn:      ((()))
+pairs_count: 3
+paired_indices: (1,6) (2,5) (3,4)

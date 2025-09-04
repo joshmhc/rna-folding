@@ -1,0 +1,5 @@
+> 7EDN | chain: A | length: 23
+sequence: UUGCGUCGCGUCGACGAAGUCGC
+dbn:      ..(((.(((((())))).).)))
+pairs_count: 9
+paired_indices: (3,23) (4,22) (5,21) (7,19) (8,17) (9,16) (10,15) (11,14) (12,13)

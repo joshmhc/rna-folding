@@ -1,0 +1,5 @@
+> 2RP0 | chain: A | length: 27
+sequence: UCCGGUCGACUCCGGAGAAACAAAGUC
+dbn:      ((((((.(.(.))))).......)).)
+pairs_count: 8
+paired_indices: (1,16) (2,15) (3,14) (4,13) (5,12) (6,24) (8,27) (10,25)

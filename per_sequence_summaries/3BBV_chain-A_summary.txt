@@ -1,0 +1,5 @@
+> 3BBV | chain: A | length: 76
+sequence: GCCCGGAUAGCUCAGUCGGUAGAGCAGGGGAUUGAAAAUCCCCGUGUCCUUGGUUCGAUUCCGAGUCCGGGCACCA
+dbn:      (((((((..((((........))))(((((((.....)))))))....((((((...)..))))))))))))....
+pairs_count: 24
+paired_indices: (1,72) (2,71) (3,70) (4,69) (5,68) (6,67) (7,66) (10,25) (11,24) (12,23) (13,22) (26,44) (27,43) (28,42) (29,41) (30,40) (31,39) (32,38) (49,65) (50,64) (51,63) (52,62) (53,61) (54,58)

@@ -1,0 +1,5 @@
+> 2FDT | chain: A | length: 36
+sequence: GGUUGUACGUCGCUUUGGAUAAAAGCGUCUGCGACC
+dbn:      ((((((..(((((((.(...).))))))).))))))
+pairs_count: 14
+paired_indices: (1,36) (2,35) (3,34) (4,33) (5,32) (6,31) (9,29) (10,28) (11,27) (12,26) (13,25) (14,24) (15,23) (17,21)

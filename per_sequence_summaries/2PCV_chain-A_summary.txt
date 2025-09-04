@@ -1,0 +1,5 @@
+> 2PCV | chain: A | length: 35
+sequence: GGACCCGCCACUGCAGAGAUGCAAUCCAGUGGUCC
+dbn:      (((((......((((....)))).......)))))
+pairs_count: 9
+paired_indices: (1,35) (2,34) (3,33) (4,32) (5,31) (12,23) (13,22) (14,21) (15,20)

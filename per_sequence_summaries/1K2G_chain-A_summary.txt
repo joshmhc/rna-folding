@@ -1,0 +1,5 @@
+> 1K2G | chain: A | length: 22
+sequence: CAGACUUCGGUCGCAGAGAUGG
+dbn:      (.((((..)))))(((..))).
+pairs_count: 8
+paired_indices: (1,13) (3,12) (4,11) (5,10) (6,9) (14,21) (15,20) (16,19)

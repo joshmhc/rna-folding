@@ -1,0 +1,5 @@
+> 2LUB | chain: A | length: 37
+sequence: GGGUGAAACGGAGGACUUCGGUCCUCAAGUUUCACCC
+dbn:      (((((((((((((((((..)))))))).)))))))))
+pairs_count: 17
+paired_indices: (1,37) (2,36) (3,35) (4,34) (5,33) (6,32) (7,31) (8,30) (9,29) (10,27) (11,26) (12,25) (13,24) (14,23) (15,22) (16,21) (17,20)

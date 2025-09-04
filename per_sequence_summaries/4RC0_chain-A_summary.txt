@@ -1,0 +1,5 @@
+> 4RC0 | chain: A | length: 12
+sequence: CGCGAAUUANCG
+dbn:      ((.((..)).))
+pairs_count: 4
+paired_indices: (1,12) (2,11) (4,9) (5,8)

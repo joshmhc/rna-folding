@@ -1,0 +1,5 @@
+> 8K7W | chain: A | length: 49
+sequence: GGGACGGUCGGGUCCAGAUAUUCGUAUCUGUCGAGUAGAGUGUGGGCUC
+dbn:      (((((.(...(.(((((((((..)))))))..)))(.(.).)).)))))
+pairs_count: 18
+paired_indices: (1,49) (2,48) (3,47) (4,46) (5,45) (7,35) (11,40) (13,34) (14,33) (15,30) (16,29) (17,28) (18,27) (19,26) (20,25) (21,24) (36,43) (38,42)

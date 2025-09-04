@@ -1,0 +1,5 @@
+> 7EXY | chain: A | length: 16
+sequence: UUGGUUUGAUUCCAAG
+dbn:      (((((...)..)))).
+pairs_count: 5
+paired_indices: (1,15) (2,14) (3,13) (4,12) (5,9)

@@ -1,0 +1,5 @@
+> 8UPY | chain: A | length: 72
+sequence: GGAAACCUGAUCAUGUAGAUCGAAUGGACUCUAAAUCCGUUCAGCCGGGUUAGAUUCCCGGGGUUUCCGCCA
+dbn:      ((.((((..((((.((.)))...(.(((......).)).)...)(((((.))....))))))))).))....
+pairs_count: 21
+paired_indices: (1,68) (2,67) (4,65) (5,64) (6,63) (7,62) (10,20) (11,19) (12,18) (13,44) (15,51) (16,52) (24,40) (26,38) (27,37) (28,35) (45,61) (46,60) (47,59) (48,58) (49,57)

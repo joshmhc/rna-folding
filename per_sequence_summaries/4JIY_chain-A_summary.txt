@@ -1,0 +1,5 @@
+> 4JIY | chain: A | length: 6
+sequence: CGUACG
+dbn:      ((()))
+pairs_count: 3
+paired_indices: (1,6) (2,5) (3,4)

@@ -1,0 +1,5 @@
+> 6NOA | chain: A | length: 56
+sequence: GGCAGUAUAGUCCGAACUGCAAAUCUUAUUUUCUUUUCACCUUCUCUCUAACUGCC
+dbn:      ((((((.((((..(((.((.(((...........)))))..)))..))))))))))
+pairs_count: 18
+paired_indices: (1,56) (2,55) (3,54) (4,53) (5,52) (6,51) (8,50) (9,49) (10,48) (11,47) (14,44) (15,43) (16,42) (18,39) (19,38) (21,37) (22,36) (23,35)

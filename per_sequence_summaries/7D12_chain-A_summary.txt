@@ -1,0 +1,5 @@
+> 7D12 | chain: A | length: 20
+sequence: GCAGCAGCUUCGGCAGCAGC
+dbn:      (((((.(((.).)).)))))
+pairs_count: 8
+paired_indices: (1,20) (2,19) (3,18) (4,17) (5,16) (7,14) (8,13) (9,11)

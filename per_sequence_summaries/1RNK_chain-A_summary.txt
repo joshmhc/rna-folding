@@ -1,0 +1,5 @@
+> 1RNK | chain: A | length: 34
+sequence: GGCGCAGUGGGCUAGCGCCACUCAAAAGGCCCAU
+dbn:      (((((..((((((.)))))........)))))).
+pairs_count: 11
+paired_indices: (1,19) (2,18) (3,17) (4,16) (5,15) (8,33) (9,32) (10,31) (11,30) (12,29) (13,28)

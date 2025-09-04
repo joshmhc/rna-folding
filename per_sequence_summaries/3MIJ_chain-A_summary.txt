@@ -1,0 +1,5 @@
+> 3MIJ | chain: A | length: 12
+sequence: UAGGGUUAGGGU
+dbn:      ..(((...))).
+pairs_count: 3
+paired_indices: (3,9) (4,10) (5,11)

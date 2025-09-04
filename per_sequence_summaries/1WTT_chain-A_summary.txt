@@ -1,0 +1,5 @@
+> 1WTT | chain: A | length: 14
+sequence: GGACCGGNNGGUCC
+dbn:      ((((((..))))))
+pairs_count: 6
+paired_indices: (1,14) (2,13) (3,12) (4,11) (5,10) (6,9)

@@ -1,0 +1,5 @@
+> 1S34 | chain: A | length: 23
+sequence: GGGGAGUGGUUUGUAUCCUUCCC
+dbn:      ((((((.(((....)))))))))
+pairs_count: 9
+paired_indices: (1,23) (2,22) (3,21) (4,20) (5,19) (6,18) (8,17) (9,16) (10,15)

@@ -1,0 +1,5 @@
+> 8SCH | chain: A | length: 68
+sequence: GAGAAUCCAGCUCUGGAAGCGUUUAUAUAACAUGAAAUAUAUAUACGCAUUCCGAUCAAAGCUGGGUU
+dbn:      ....((((((((..(((.(((((((((((........)))))))))))..)))......)))))))).
+pairs_count: 22
+paired_indices: (5,67) (6,66) (7,65) (8,64) (9,63) (10,62) (11,61) (12,60) (15,53) (16,52) (17,51) (19,48) (20,47) (21,46) (22,45) (23,44) (24,43) (25,42) (26,41) (27,40) (28,39) (29,38)

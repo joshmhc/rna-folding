@@ -1,0 +1,5 @@
+> 7V06 | chain: A | length: 43
+sequence: GGUGCUGUUUAUCCAUUUCAGAAUUGGGUGUCGACAUAGCACC
+dbn:      ((((((((((((((((((...))))))))))....))))))))
+pairs_count: 18
+paired_indices: (1,43) (2,42) (3,41) (4,40) (5,39) (6,38) (7,37) (8,36) (9,31) (10,30) (11,29) (12,28) (13,27) (14,26) (15,25) (16,24) (17,23) (18,22)

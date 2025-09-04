@@ -1,0 +1,5 @@
+> 6VUI | chain: A | length: 33
+sequence: CUGGGUCGCAGUAACCCCAGUUAACAAAACAAG
+dbn:      (((((((((((....))))).......))))))
+pairs_count: 11
+paired_indices: (1,20) (2,19) (3,18) (4,17) (5,16) (6,28) (7,29) (8,31) (9,33) (10,32) (11,30)

@@ -1,0 +1,5 @@
+> 2KEZ | chain: A | length: 24
+sequence: GGUUCCCCUGCAUAAGGAUGAACC
+dbn:      ((((((((((...)))).))))))
+pairs_count: 10
+paired_indices: (1,24) (2,23) (3,22) (4,21) (5,20) (6,19) (7,17) (8,16) (9,15) (10,14)

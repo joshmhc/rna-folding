@@ -1,0 +1,5 @@
+> 1MFJ | chain: A | length: 20
+sequence: GACAGUCUCUACGGAGACUG
+dbn:      ()((((((((..))))))))
+pairs_count: 9
+paired_indices: (1,2) (3,20) (4,19) (5,18) (6,17) (7,16) (8,15) (9,14) (10,13)

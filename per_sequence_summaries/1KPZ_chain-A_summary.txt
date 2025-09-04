@@ -1,0 +1,5 @@
+> 1KPZ | chain: A | length: 33
+sequence: GAAUUCCGGUCGACUCCGGAGAAACAAAGUCAA
+dbn:      .................................
+pairs_count: 0
+paired_indices: (none)

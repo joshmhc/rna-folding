@@ -1,0 +1,5 @@
+> 6AAS | chain: A | length: 28
+sequence: GGUAAGUGUACUGGAAAGUGCACUUGCC
+dbn:      (((((((((((((..)))))))))))))
+pairs_count: 13
+paired_indices: (1,28) (2,27) (3,26) (4,25) (5,24) (6,23) (7,22) (8,21) (9,20) (10,19) (11,18) (12,17) (13,16)

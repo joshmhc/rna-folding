@@ -1,0 +1,5 @@
+> 1BGZ | chain: A | length: 23
+sequence: GGGAUACUGCUUCGGUAAGUCCC
+dbn:      ((((..((((....)).))))))
+pairs_count: 8
+paired_indices: (1,23) (2,22) (3,21) (4,20) (7,19) (8,18) (9,16) (10,15)

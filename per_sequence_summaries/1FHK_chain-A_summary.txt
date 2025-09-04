@@ -1,0 +1,5 @@
+> 1FHK | chain: A | length: 14
+sequence: GGCGGUGAAAUGCC
+dbn:      (((((....)))))
+pairs_count: 5
+paired_indices: (1,14) (2,13) (3,12) (4,11) (5,10)

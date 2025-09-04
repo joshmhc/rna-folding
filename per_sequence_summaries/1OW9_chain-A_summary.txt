@@ -1,0 +1,5 @@
+> 1OW9 | chain: A | length: 23
+sequence: GAGCGAAGACGAAAGUCGAGCUC
+dbn:      ((((()(((((..))))).))))
+pairs_count: 10
+paired_indices: (1,23) (2,22) (3,21) (4,20) (5,6) (7,18) (8,17) (9,16) (10,15) (11,14)

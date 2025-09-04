@@ -1,0 +1,5 @@
+> 2LHP | chain: A | length: 37
+sequence: GGGUGAAAUGGAGGACUUCGGUCCUCAAAUUUCACCC
+dbn:      (((((((((.(((((((..)))))))..)))))))))
+pairs_count: 16
+paired_indices: (1,37) (2,36) (3,35) (4,34) (5,33) (6,32) (7,31) (8,30) (9,29) (11,26) (12,25) (13,24) (14,23) (15,22) (16,21) (17,20)

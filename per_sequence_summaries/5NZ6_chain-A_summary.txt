@@ -1,0 +1,5 @@
+> 5NZ6 | chain: A | length: 41
+sequence: CCGGACGAGGUGCGCCGUACCCGGUCACGACAAGACGGCGC
+dbn:      (((((......((((((()())))....).....)))))))
+pairs_count: 13
+paired_indices: (1,24) (2,23) (3,22) (4,21) (5,19) (12,41) (13,40) (14,39) (15,38) (16,37) (17,36) (18,35) (20,29)

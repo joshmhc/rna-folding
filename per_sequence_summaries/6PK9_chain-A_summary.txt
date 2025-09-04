@@ -1,0 +1,5 @@
+> 6PK9 | chain: A | length: 20
+sequence: GGAGGGUAGACUCGCUCUCC
+dbn:      (((((((......)))))))
+pairs_count: 7
+paired_indices: (1,20) (2,19) (3,18) (4,17) (5,16) (6,15) (7,14)

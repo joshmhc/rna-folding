@@ -1,0 +1,5 @@
+> 2LP9 | chain: A | length: 16
+sequence: GAGGACAUAGAUCUUC
+dbn:      (((((((.)).)))))
+pairs_count: 7
+paired_indices: (1,16) (2,15) (3,14) (4,13) (5,12) (6,10) (7,9)

@@ -1,0 +1,5 @@
+> 1A60 | chain: A | length: 44
+sequence: GGGAGCUCAACUCUCCCCCCCUUUUCCGAGGGUCAUCGGAACCA
+dbn:      ((((((....).)))))(((...(((((()))...))))))...
+pairs_count: 15
+paired_indices: (1,17) (2,16) (3,15) (4,14) (5,13) (6,11) (18,32) (19,31) (20,30) (24,41) (25,40) (26,39) (27,38) (28,37) (29,36)

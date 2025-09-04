@@ -1,0 +1,5 @@
+> 2LWK | chain: A | length: 32
+sequence: GAGUAGAAACAAGGCUUCGGCCUGCUUUUGCU
+dbn:      .((((((((((.((((..))))))))))))))
+pairs_count: 14
+paired_indices: (2,32) (3,31) (4,30) (5,29) (6,28) (7,27) (8,26) (9,25) (10,24) (11,23) (13,22) (14,21) (15,20) (16,19)

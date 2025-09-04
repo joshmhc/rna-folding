@@ -1,0 +1,5 @@
+> 1P79 | chain: A | length: 6
+sequence: UGUGGU
+dbn:      .).)))
+pairs_count: 4
+paired_indices: (2,2) (4,4) (5,5) (6,6)

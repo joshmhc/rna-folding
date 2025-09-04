@@ -1,0 +1,5 @@
+> 1KPY | chain: A | length: 33
+sequence: GAAUUCCGGUCGACUCCGGAGAAACAAAGUCAA
+dbn:      ....((((((.(((.))))).......))))..
+pairs_count: 9
+paired_indices: (5,20) (6,19) (7,18) (8,17) (9,16) (10,28) (12,31) (13,30) (14,29)

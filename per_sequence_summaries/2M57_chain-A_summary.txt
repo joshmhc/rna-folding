@@ -1,0 +1,5 @@
+> 2M57 | chain: A | length: 35
+sequence: GGAGCCGUAUGCGGUAGUUCCGCACGUACGGAUCU
+dbn:      ((..(((((.((((.....)))).)..))))..))
+pairs_count: 11
+paired_indices: (1,35) (2,34) (5,31) (6,30) (7,29) (8,28) (9,25) (11,23) (12,22) (13,21) (14,20)

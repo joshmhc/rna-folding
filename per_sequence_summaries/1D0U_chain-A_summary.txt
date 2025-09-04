@@ -1,0 +1,5 @@
+> 1D0U | chain: A | length: 21
+sequence: GGGAUCACCAUUAGGGAUCUC
+dbn:      ((((((.((.(.)))))))))
+pairs_count: 9
+paired_indices: (1,21) (2,20) (3,19) (4,18) (5,17) (6,16) (8,15) (9,14) (11,13)

@@ -1,0 +1,5 @@
+> 2LQZ | chain: A | length: 27
+sequence: GGACUUCCAUUGCUUCGGCAAAAGUCC
+dbn:      (((((....(((((..))))).)))))
+pairs_count: 10
+paired_indices: (1,27) (2,26) (3,25) (4,24) (5,23) (10,21) (11,20) (12,19) (13,18) (14,17)

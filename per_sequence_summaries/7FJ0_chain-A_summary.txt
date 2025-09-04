@@ -1,0 +1,5 @@
+> 7FJ0 | chain: A | length: 20
+sequence: GGAUGCUUACUCAGCGAUCC
+dbn:      (((((((.....))).))))
+pairs_count: 7
+paired_indices: (1,20) (2,19) (3,18) (4,17) (5,15) (6,14) (7,13)

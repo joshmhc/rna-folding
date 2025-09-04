@@ -1,0 +1,5 @@
+> 6IZP | chain: A | length: 29
+sequence: GUACUGGAACAUGUUUCAUGUGGAAGUAC
+dbn:      (((((...(((((...)))))...)))))
+pairs_count: 10
+paired_indices: (1,29) (2,28) (3,27) (4,26) (5,25) (9,21) (10,20) (11,19) (12,18) (13,17)

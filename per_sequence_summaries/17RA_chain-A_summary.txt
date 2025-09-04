@@ -1,0 +1,5 @@
+> 17RA | chain: A | length: 21
+sequence: GGCGUAAGGAUUACCUAUGCC
+dbn:      (((((..((....)).)))))
+pairs_count: 7
+paired_indices: (1,21) (2,20) (3,19) (4,18) (5,17) (8,15) (9,14)

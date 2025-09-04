@@ -1,0 +1,5 @@
+> 5KH8 | chain: A | length: 47
+sequence: GGCGAUGGUGUUCGCCAUAAACGCUCUUCGGAGCUAAUGACACCUAC
+dbn:      (((((.(((((())))......(((((..)))))).(.)))))))..
+pairs_count: 17
+paired_indices: (1,16) (2,15) (3,14) (4,13) (5,35) (7,44) (8,43) (9,42) (10,41) (11,40) (12,39) (23,34) (24,33) (25,32) (26,31) (27,30) (37,45)

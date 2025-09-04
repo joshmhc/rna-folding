@@ -1,0 +1,5 @@
+> 6FZ0 | chain: A | length: 53
+sequence: AGGCGCAUUUGAACUGUAUUGUACGCCUUGCAUAAAGCAAAAGUACUAAAAAA
+dbn:      ((((...(......(.(((((((())))((.......))...)))))))))).
+pairs_count: 16
+paired_indices: (1,28) (2,27) (3,26) (4,25) (8,47) (15,51) (17,52) (18,50) (19,49) (20,48) (21,46) (22,45) (23,44) (24,43) (29,39) (30,38)

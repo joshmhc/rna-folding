@@ -1,0 +1,5 @@
+> 1IK1 | chain: A | length: 14
+sequence: GGUACUAUGUACCA
+dbn:      (((((...))))).
+pairs_count: 5
+paired_indices: (1,13) (2,12) (3,11) (4,10) (5,9)

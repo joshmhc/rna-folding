@@ -1,0 +1,5 @@
+> 2L5Z | chain: A | length: 26
+sequence: GAGCUGCAGCACGAAAGUGACGGCUC
+dbn:      ((((((..(((((..)))))))))))
+pairs_count: 11
+paired_indices: (1,26) (2,25) (3,24) (4,23) (5,22) (6,21) (9,20) (10,19) (11,18) (12,17) (13,16)

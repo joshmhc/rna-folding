@@ -1,0 +1,5 @@
+> 1RHT | chain: A | length: 24
+sequence: GGGACUGACGAUCACGCAGUCUAU
+dbn:      .((((((.((....))))))))..
+pairs_count: 8
+paired_indices: (2,22) (3,21) (4,20) (5,19) (6,18) (7,17) (9,16) (10,15)

@@ -1,0 +1,5 @@
+> 1MDG | chain: A | length: 6
+sequence: UNAGGU
+dbn:      ......
+pairs_count: 0
+paired_indices: (none)

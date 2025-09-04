@@ -1,0 +1,5 @@
+> 6HBT | chain: A | length: 18
+sequence: GGUGGGGACGACCCCACC
+dbn:      (((((((....)))))))
+pairs_count: 7
+paired_indices: (1,18) (2,17) (3,16) (4,15) (5,14) (6,13) (7,12)

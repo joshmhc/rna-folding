@@ -1,0 +1,5 @@
+> 1EBR | chain: A | length: 30
+sequence: GGUGGGCGCAGCUUCGGCUGACGGUACACC
+dbn:      (((((((((((((..))))).))).)))))
+pairs_count: 13
+paired_indices: (1,30) (2,29) (3,28) (4,27) (5,26) (6,24) (7,23) (8,22) (9,20) (10,19) (11,18) (12,17) (13,16)

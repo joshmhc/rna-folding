@@ -1,0 +1,5 @@
+> 5HBY | chain: A | length: 13
+sequence: NNNNACUUAAGUC
+dbn:      ...((((()))))
+pairs_count: 5
+paired_indices: (4,13) (5,12) (6,11) (7,10) (8,9)

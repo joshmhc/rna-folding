@@ -1,0 +1,5 @@
+> 4A4U | chain: A | length: 22
+sequence: GGACCCGGCUGACGCUGGGUCC
+dbn:      (((((((((....)))))))))
+pairs_count: 9
+paired_indices: (1,22) (2,21) (3,20) (4,19) (5,18) (6,17) (7,16) (8,15) (9,14)

@@ -1,0 +1,5 @@
+> 1EHT | chain: A | length: 33
+sequence: GGCGAUACCAGCCGAAAGGCCCUUGGCAGCGUC
+dbn:      ((((.(.(((((((..))))).(.)).))))))
+pairs_count: 13
+paired_indices: (1,33) (2,32) (3,31) (4,30) (6,29) (8,26) (9,25) (10,21) (11,20) (12,19) (13,18) (14,17) (23,28)

@@ -1,0 +1,5 @@
+> 2AWQ | chain: A | length: 17
+sequence: GGGGAUUGAAAAUCCCC
+dbn:      ..((..........)).
+pairs_count: 2
+paired_indices: (3,16) (4,15)

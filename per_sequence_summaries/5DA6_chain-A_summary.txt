@@ -1,0 +1,5 @@
+> 5DA6 | chain: A | length: 32
+sequence: AGAGAAGAAAGGGAAAUUUUUUUUUUUUUUUU
+dbn:      (((((((((((((((())))))))))))))))
+pairs_count: 16
+paired_indices: (1,32) (2,31) (3,30) (4,29) (5,28) (6,27) (7,26) (8,25) (9,24) (10,23) (11,22) (12,21) (13,20) (14,19) (15,18) (16,17)

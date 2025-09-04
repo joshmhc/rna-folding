@@ -1,0 +1,5 @@
+> 1KP7 | chain: A | length: 30
+sequence: GGCGCUCAAUGCUCUUCGGAGACGACCGCC
+dbn:      (((((((.(.(((((..)))))))))))))
+pairs_count: 13
+paired_indices: (1,30) (2,29) (3,28) (4,27) (5,26) (6,25) (7,24) (9,23) (11,22) (12,21) (13,20) (14,19) (15,18)

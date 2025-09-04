@@ -1,0 +1,5 @@
+> 1LVJ | chain: A | length: 31
+sequence: GGCCAGAUCUGAGCCUGGGAGCUCUCUGGCC
+dbn:      (((((((...((((......)))))))))))
+pairs_count: 11
+paired_indices: (1,31) (2,30) (3,29) (4,28) (5,27) (6,26) (7,25) (11,24) (12,23) (13,22) (14,21)

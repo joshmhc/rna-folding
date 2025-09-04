@@ -1,0 +1,5 @@
+> 2LJJ | chain: A | length: 27
+sequence: GGCCUCAGCACUACCCCAGUGUAGGUC
+dbn:      ((((...(((((.....))))).))))
+pairs_count: 9
+paired_indices: (1,27) (2,26) (3,25) (4,24) (8,22) (9,21) (10,20) (11,19) (12,18)

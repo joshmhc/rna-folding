@@ -1,0 +1,5 @@
+> 2KHY | chain: A | length: 38
+sequence: GGGAUCACAAGUAGGACUUCGGUCCGAAUACAGAUCUC
+dbn:      ((((((...(.((((((....)))))))....))))))
+pairs_count: 13
+paired_indices: (1,38) (2,37) (3,36) (4,35) (5,34) (6,33) (10,28) (12,27) (13,26) (14,25) (15,24) (16,23) (17,22)

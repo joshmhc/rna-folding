@@ -1,0 +1,5 @@
+> 4NXH | chain: A | length: 27
+sequence: UGCNCCUAGUACGAGAGGACCGGAGUG
+dbn:      .((.(((..((((..)))).))).)).
+pairs_count: 9
+paired_indices: (2,26) (3,25) (5,23) (6,22) (7,21) (10,19) (11,18) (12,17) (13,16)

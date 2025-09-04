@@ -1,0 +1,5 @@
+> 8I45 | chain: A | length: 19
+sequence: GGACGCUUUCGAGCGGUCC
+dbn:      ((((((((..)))).))))
+pairs_count: 8
+paired_indices: (1,19) (2,18) (3,17) (4,16) (5,14) (6,13) (7,12) (8,11)

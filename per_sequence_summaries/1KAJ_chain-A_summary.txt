@@ -1,0 +1,5 @@
+> 1KAJ | chain: A | length: 32
+sequence: GGCGCAGUGGGCUAGCGCCACUCAAAAGCCCG
+dbn:      (((((...((((..)))))........)))).
+pairs_count: 9
+paired_indices: (1,19) (2,18) (3,17) (4,16) (5,15) (9,31) (10,30) (11,29) (12,28)

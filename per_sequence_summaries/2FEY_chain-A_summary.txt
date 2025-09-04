@@ -1,0 +1,5 @@
+> 2FEY | chain: A | length: 43
+sequence: GAGACUAUCGACAUUUGAUACACUAUUUAUCAAUGGAUGUCUC
+dbn:      (((((...(..(((..(((((.....))))).))))..)))))
+pairs_count: 14
+paired_indices: (1,43) (2,42) (3,41) (4,40) (5,39) (9,36) (12,35) (13,34) (14,33) (17,31) (18,30) (19,29) (20,28) (21,27)

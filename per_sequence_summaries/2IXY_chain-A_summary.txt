@@ -1,0 +1,5 @@
+> 2IXY | chain: A | length: 27
+sequence: GGCCUCCAAGCUGUGCCUUGGGUGGCC
+dbn:      (((((((((((...).)))))).))))
+pairs_count: 11
+paired_indices: (1,27) (2,26) (3,25) (4,24) (5,22) (6,21) (7,20) (8,19) (9,18) (10,17) (11,15)

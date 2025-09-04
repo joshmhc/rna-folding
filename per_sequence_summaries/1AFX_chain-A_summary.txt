@@ -1,0 +1,5 @@
+> 1AFX | chain: A | length: 12
+sequence: GGUGUGAACACC
+dbn:      ((((....))))
+pairs_count: 4
+paired_indices: (1,12) (2,11) (3,10) (4,9)

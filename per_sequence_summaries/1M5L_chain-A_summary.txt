@@ -1,0 +1,5 @@
+> 1M5L | chain: A | length: 38
+sequence: GCGCAGGACUCGGCUUCUUCGGAAGGGACGAGGGGCGC
+dbn:      ((((.(.(((((((((((..)))))..)))))))))))
+pairs_count: 16
+paired_indices: (1,38) (2,37) (3,36) (4,35) (6,34) (8,33) (9,32) (10,31) (11,30) (12,29) (13,28) (14,25) (15,24) (16,23) (17,22) (18,21)

@@ -1,0 +1,5 @@
+> 6UGJ | chain: A | length: 31
+sequence: GGAGCGGGCGGGUUCGAGUCCCGUCCGUUCC
+dbn:      (((((((((((((...)..))))))))))))
+pairs_count: 13
+paired_indices: (1,31) (2,30) (3,29) (4,28) (5,27) (6,26) (7,25) (8,24) (9,23) (10,22) (11,21) (12,20) (13,17)

@@ -1,0 +1,5 @@
+> 2L94 | chain: A | length: 45
+sequence: GGGAAGAUCUGGCCUUCCCACAAGGGAAGGCCAGGGAAUCUUCCC
+dbn:      ((((((((((((((((((((..))))))))))))...))))))))
+pairs_count: 20
+paired_indices: (1,45) (2,44) (3,43) (4,42) (5,41) (6,40) (7,39) (8,38) (9,34) (10,33) (11,32) (12,31) (13,30) (14,29) (15,28) (16,27) (17,26) (18,25) (19,24) (20,23)

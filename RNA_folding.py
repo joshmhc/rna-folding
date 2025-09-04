@@ -684,31 +684,15 @@ def merge_maximal(bond_matrix, stem_dict, target_stem=None, rna_sequence=None):
     reduced_size = new_pos
     reduced_matrix = np.zeros((reduced_size, reduced_size), dtype=int)
     
-    # Fill the reduced matrix, excluding bonds involving collapsed nodes
+    # Fill the reduced matrix based on position mapping
     for i in range(n):
         for j in range(i + 1, n):  # Upper triangular only
             if bond_matrix[i, j] > 0:
-                # Skip bonds that involve positions in the collapsed stem
-                if i in first_side_positions or i in second_side_positions or j in first_side_positions or j in second_side_positions:
-                    continue
-                
                 new_i = position_mapping[i]
                 new_j = position_mapping[j]
                 if new_i != new_j:  # Don't create self-loops
-                    reduced_matrix[min(new_i, new_j), max(new_i, new_j)] = bond_matrix[i, j]
-    
-    # Add bond between the two stem super-nodes
-    # The strength is the number of bond pairs in the stem
-    stem_length = target_stem[1] - target_stem[0] + 1
-    stem_bond_strength = stem_length  # Number of bond pairs equals stem length
-    
-    # Find the positions of the two super-nodes
-    first_super_node = position_mapping[target_stem[0]]  # Any position from first side
-    second_super_node = position_mapping[target_stem[2]]  # Any position from second side
-    
-    # Add the bond between the super-nodes
-    reduced_matrix[min(first_super_node, second_super_node), max(first_super_node, second_super_node)] = stem_bond_strength
-    
+                    reduced_matrix[min(new_i, new_j), max(new_i, new_j)] += bond_matrix[i, j]
+
     # Create modified sequence where merged stem positions are compressed
     if rna_sequence is None:
         # If no sequence provided, return None for modified_sequence
@@ -797,18 +781,20 @@ def make_stem_dict(bond_matrix, min_stem, min_loop):
 
     stem_dict = {}
     n = bond_matrix.shape[0]
+    # Create a copy to avoid modifying the original matrix
+    working_matrix = bond_matrix.copy()
 
     # Iterate through matrix looking for possible stems.
     for i in range(n + 1 - (2 * min_stem + min_loop)):
         for j in range(i + 2 * min_stem + min_loop - 1, n):
-            if bond_matrix[i, j] > 0:
-                k = bond_matrix[i, j]  # Start with the bond strength at current position
+            if working_matrix[i, j] > 0:
+                k = working_matrix[i, j]  # Start with the bond strength at current position
                 # Check down and left for length of stem.
-                # Note that bond_matrix is strictly upper triangular, so loop will terminate.
+                # Note that working_matrix is strictly upper triangular, so loop will terminate.
                 offset = 1
-                while i + offset < n and j - offset >= 0 and bond_matrix[i + offset, j - offset] > 0:
-                    k += bond_matrix[i + offset, j - offset]  # Add bond strength to sum
-                    bond_matrix[i + offset, j - offset] = 0
+                while i + offset < n and j - offset >= 0 and working_matrix[i + offset, j - offset] > 0:
+                    k += working_matrix[i + offset, j - offset]  # Add bond strength to sum
+                    working_matrix[i + offset, j - offset] = 0
                     offset += 1
 
                 if k >= min_stem:
@@ -1107,7 +1093,7 @@ def pseudoknot_terms(stem_dict, min_stem=3, c=0.3):
                             if substem1[1] < substem2[0] and substem2[1] < substem1[2] and substem1[3] < substem2[2]})
     return pseudos
 
-def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None):
+def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=10, bond_matrix=None, node_size_scale=1.0, edge_width_scale=1.0, dpi=300, figsize=(12, 8)):
     """ Produces graph plot and saves as .png file.
 
     Args:
@@ -1121,11 +1107,29 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None
             Random seed for reproducible layouts
         bond_matrix (numpy.ndarray, optional):
             Bond matrix to determine edge strengths for visualization
+        node_size_scale (float):
+            Scale factor for node sizes (default: 1.0)
+        edge_width_scale (float):
+            Scale factor for edge widths (default: 1.0)
+        dpi (int):
+            Resolution in dots per inch (default: 300)
+        figsize (tuple):
+            Figure size in inches (width, height) (default: (12, 8))
     """
+
+    # Create plots directory if it doesn't exist
+    import os
+    plots_dir = 'plots'
+    if not os.path.exists(plots_dir):
+        os.makedirs(plots_dir)
+        print(f"Created plots directory: {plots_dir}")
 
     # Clear the current figure to prevent overlapping plots
     plt.clf()
     plt.close('all')
+
+    # Create figure with specified size and DPI
+    fig = plt.figure(figsize=figsize, dpi=dpi)
 
     # Use the provided RNA sequence directly
     rna = rna_sequence.lower()
@@ -1155,28 +1159,31 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None
     # Assign each nucleotide to a color and size.
     color_map = []
     node_sizes = {}
+    base_size = 200 * node_size_scale
+    merged_size = 400 * node_size_scale
+    
     for i, node in enumerate(rna):
         if node == 'u':  # Merged node
             color_map.append('tab:blue')
-            node_sizes[i] = 200
+            node_sizes[i] = base_size
         elif node == 'g':
             color_map.append('tab:red')
-            node_sizes[i] = 200
+            node_sizes[i] = base_size
         elif node == 'c':
             color_map.append('tab:green')
-            node_sizes[i] = 200
+            node_sizes[i] = base_size
         elif node == 'a':
             color_map.append('y')
-            node_sizes[i] = 200
+            node_sizes[i] = base_size
         else:
             color_map.append('purple')  # Distinct color for merged nodes
-            node_sizes[i] = 400      # Larger size for merged nodes
+            node_sizes[i] = merged_size      # Larger size for merged nodes
             
 
     # Get the actual nodes in the graph and create color_map and node_sizes lists
     graph_nodes = list(G.nodes())
     color_map_list = [color_map[i] if i < len(color_map) else 'tab:blue' for i in graph_nodes]
-    node_sizes_list = [node_sizes.get(i, 200) for i in graph_nodes]
+    node_sizes_list = [node_sizes.get(i, base_size) for i in graph_nodes]
 
     options = {"edgecolors": "tab:gray", "alpha": 0.8}
     
@@ -1186,11 +1193,11 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None
     # Set weights for different edge types
     for edge in weighted_G.edges():
         if edge in rna_edges:
-            weighted_G[edge[0]][edge[1]]['weight'] = 4.0  # Strong backbone
+            weighted_G[edge[0]][edge[1]]['weight'] = 3.0  
         elif edge in stem_edges:
-            weighted_G[edge[0]][edge[1]]['weight'] = 0.3  # Very weak base pairs - push them apart
+            weighted_G[edge[0]][edge[1]]['weight'] = 0.5
         else:
-            weighted_G[edge[0]][edge[1]]['weight'] = 1.0  # Default weight
+            weighted_G[edge[0]][edge[1]]['weight'] = 1.0
     
     # Uncomment the line below to see the difference without weights:
     # weighted_G = G.copy()  # This would make all edges equal weight
@@ -1198,10 +1205,12 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None
     # Use spring layout with edge weights
     pos = nx.spring_layout(weighted_G, 
                           iterations=5000,  # Number of iterations
-                          k=2.0,           # Optimal distance between nodes
+                          k=5.0,           # Optimal distance between nodes
                           seed=seed,       # For reproducible results
-                          scale=0.8,       # Scale factor for positions
+                          scale=2.0,       # Scale factor for positions
                           weight='weight') # Use edge weights
+    
+    # pos = nx.spring_layout(G, iterations=5000, seed=seed)
     
     nx.draw_networkx_nodes(G, pos, node_color=color_map_list, node_size=node_sizes_list, **options)
 
@@ -1221,7 +1230,8 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None
     nx.draw_networkx_labels(G, pos, labels, font_size=10, font_color="whitesmoke")
 
     # Draw RNA backbone edges
-    nx.draw_networkx_edges(G, pos, edgelist=rna_edges, width=3.0, alpha=0.5)
+    backbone_width = 3.0 * edge_width_scale
+    nx.draw_networkx_edges(G, pos, edgelist=rna_edges, width=backbone_width, alpha=0.5)
     
     # Draw stem edges with widths based on bond strength
     if stem_edges:
@@ -1232,8 +1242,8 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None
                 i, j = edge
                 # Get bond strength from matrix (use min/max to get correct position)
                 bond_strength = bond_matrix[min(i, j), max(i, j)]
-                # Scale bond strength to width (1-8 range)
-                width = max(1.0, min(8.0, bond_strength * 2.0))
+                # Scale bond strength to width (1-8 range) and apply edge width scale
+                width = max(1.0, min(8.0, bond_strength * 2.0)) * edge_width_scale
                 edge_widths.append(width)
             
             # Draw each stem edge with its specific width
@@ -1241,15 +1251,18 @@ def make_plot(rna_sequence, stems, fig_name='RNA_plot', seed=1, bond_matrix=None
                 nx.draw_networkx_edges(G, pos, edgelist=[edge], 
                                      width=edge_widths[i], 
                                      alpha=0.7, 
-                                     edge_color='tab:pink')
+                                     edge_color='tab:red')
         else:
             # Fallback: draw all stem edges with uniform width
+            stem_width = 4.5 * edge_width_scale
             nx.draw_networkx_edges(G, pos, edgelist=stem_edges, 
-                                 width=4.5, alpha=0.7, edge_color='tab:pink')
+                                 width=stem_width, alpha=0.7, edge_color='tab:red')
 
-    plt.savefig(fig_name + '.png')
+    # Save plot in the plots directory with high resolution
+    plot_path = os.path.join(plots_dir, fig_name + '.png')
+    plt.savefig(plot_path, dpi=dpi, bbox_inches='tight', facecolor='white', edgecolor='none')
 
-    print('\nPlot of solution saved as {}.png'.format(fig_name))
+    print('\nPlot of solution saved as {}'.format(plot_path))
 
 def build_cqm(stem_dict, min_stem, c):
     """ Creates a constrained quadratic model to optimize most likely stems from a dictionary of possible stems.
@@ -1355,8 +1368,10 @@ def print_matrix_and_stem_dict(matrix, stem_dict):
             else:
                 print(int(matrix[i][j]), end=' ')
         print()
-        
-    for i in stem_dict:
+    
+    # Order stems by length in descending order (stem[1] - stem[0])
+    sorted_stems = sorted(stem_dict.keys(), key=lambda stem: stem[1] - stem[0], reverse=True)
+    for i in sorted_stems:
         print(i)
 
 def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, original_size, modified_sequence=None, min_stem=3, min_loop=2):
@@ -1376,12 +1391,7 @@ def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, orig
     print("\nReverse mapping (new -> original positions):")
     for new_pos, orig_positions in sorted(reverse_mapping.items()):
         print(f"  {new_pos} -> {orig_positions}")
-    
-    # Find and print maximal stems in the reduced matrix
-    reduced_stem_dict = make_stem_dict(reduced_matrix, min_stem, min_loop)
-    print(f"\nMaximal stems in reduced matrix: {list(reduced_stem_dict.keys())}")
-    print(f"Number of maximal stems: {len(reduced_stem_dict)}")
-    
+
     print("\nReduced matrix:")
     print(' ', end=' ')
     for i in range(len(reduced_matrix)):
@@ -1395,6 +1405,15 @@ def print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, orig
             else:
                 print(int(reduced_matrix[i][j]), end=' ')
         print()
+
+    # Find and print maximal stems in the reduced matrix
+    reduced_stem_dict = make_stem_dict(reduced_matrix, min_stem, min_loop)
+    # Order stems by length in descending order (stem[1] - stem[0])
+    sorted_reduced_stems = sorted(reduced_stem_dict.keys(), key=lambda stem: stem[1] - stem[0], reverse=True)
+    print(f"\nMaximal stems in reduced matrix:")
+    for stem in sorted_reduced_stems:
+        print(stem)
+    print(f"Number of maximal stems: {len(reduced_stem_dict)}")
 
 def find_sequence_symmetries(rna_sequence, min_symmetry_length=3):
     """
@@ -1610,7 +1629,7 @@ def create_hairpin_example(reduced_sequence):
 
 
 # Create command line functionality.
-DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'simple_pseudo.txt')
+DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'NC_008516.txt')
 
 
 @click.command(help='Solve an instance of the RNA folding problem using '
@@ -1646,123 +1665,10 @@ def main(path, verbose, min_stem, min_loop, c):
 
     Returns:
         None: None
-    """
-    #### Testing comprehensive symmetry reduction ####
-    
-    # Read the RNA sequence for symmetry reduction
-    with open(path) as f:
-        rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
-    
-    matrix = text_to_matrix(path, min_loop)
-    matrix_copy = np.copy(matrix)
-    stem_dict = make_stem_dict(matrix_copy, min_stem, min_loop)
+    """    
 
-    print_matrix_and_stem_dict(matrix, stem_dict)
     
-    # Test comprehensive symmetry reduction on real RNA sequence
-    print("\n=== Testing comprehensive symmetry reduction ===")
-    print(f"RNA sequence: {rna_sequence}")
-    
-    # Apply comprehensive symmetry reduction
-    symmetry_results = symmetry_reduction(matrix, rna_sequence, min_palindrome_len=10, min_repeat_len=4, min_mirror_len=3)
-    
-    # Print detailed results
-    print_symmetry_results(symmetry_results, matrix.shape[0])
-    
-    # Plot palindrome reduction results if any exist
-    if symmetry_results['palindrome_results']:
-        print("\n=== Plotting palindrome reduction results ===")
-        for i, result in enumerate(symmetry_results['palindrome_results']):
-            print(f"Plotting palindrome reduction {i+1}: {result['symmetry']}")
-            
-            # Plot the reduced solution
-            reduced_sequence = result['modified_sequence']
-            reduced_matrix = result['reduced_matrix']
-            
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as temp_file:
-                temp_file.write(f"1 {reduced_sequence}\n")
-                temp_file_path = temp_file.name
-            
-            try:
-                # Make stem dictionary for reduced matrix
-                reduced_stem_dict = make_stem_dict(reduced_matrix, min_stem, min_loop)
-
-                
-                # Solve the reduced problem using D-Wave
-                print(f"  Solving reduced problem (size: {reduced_matrix.shape[0]})...")
-                solution = None
-                
-                try:
-                    from dwave.system import LeapHybridCQMSampler
-                    
-                    # Build CQM for reduced problem
-                    cqm = build_cqm(reduced_stem_dict, min_stem, c)
-                    
-                    # Solve with D-Wave
-                    sampler = LeapHybridCQMSampler()
-                    sampleset = sampler.sample_cqm(cqm)
-                    
-                    # Process solution
-                    solution = process_cqm_solution(sampleset, reduced_matrix)
-                    
-                except ImportError:
-                    print(f"  D-Wave solver not available, using stems from reduced matrix")
-                    # Use actual stems from the reduced matrix instead of artificial examples
-                    if reduced_stem_dict:
-                        # Take the first few stems from the reduced matrix
-                        all_stems = []
-                        for stems_list in reduced_stem_dict.values():
-                            all_stems.extend(stems_list)
-                        if all_stems:
-                            # Take up to 3 stems for visualization
-                            solution = all_stems[:3]
-                        else:
-                            solution = create_hairpin_example(reduced_sequence)
-                    else:
-                        solution = create_hairpin_example(reduced_sequence)
-                except Exception as e:
-                    print(f"  Error solving reduced problem: {e}")
-                    print(f"  Using stems from reduced matrix")
-                    # Use actual stems from the reduced matrix
-                    if reduced_stem_dict:
-                        all_stems = []
-                        for stems_list in reduced_stem_dict.values():
-                            all_stems.extend(stems_list)
-                        if all_stems:
-                            solution = all_stems[:3]
-                        else:
-                            solution = create_hairpin_example(reduced_sequence)
-                    else:
-                        solution = create_hairpin_example(reduced_sequence)
-                
-                # Process solution and create plots
-                if solution:
-                    # Convert solution stems back to original coordinates
-                    converted_stems = convert_reduced_solution_to_original(
-                        result['reverse_mapping'], solution
-                    )
-                    
-                    print(f"  Reduced solution stems: {solution}")
-                    print(f"  Converted to original coordinates: {converted_stems}")
-                    
-                    # Plot the reduced solution
-                    make_plot(reduced_sequence, solution, f'palindrome_reduced_{i+1}', seed=99, bond_matrix=reduced_matrix)
-                    
-                    # Plot the converted solution
-                    make_plot(rna_sequence, converted_stems, f'palindrome_converted_{i+1}', seed=50, bond_matrix=matrix)
-                    
-                    print(f"  Plots saved: palindrome_reduced_{i+1}.png, palindrome_converted_{i+1}.png")
-                else:
-                    print(f"  No valid solution found for reduced problem")
-                    
-            finally:
-                # Clean up temporary file
-                os.unlink(temp_file_path)
-    else:
-        print("\nNo palindrome reductions to plot")
-    
-    """
-    #### Testing the reduction methods with hand made examples####
+    #### IDLE SEQUENCE REDUCTION ####
     # Read the RNA sequence for idle sequence detection
     with open(path) as f:
         rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
@@ -1772,11 +1678,50 @@ def main(path, verbose, min_stem, min_loop, c):
     stem_dict = make_stem_dict(matrix_copy, min_stem, min_loop)
 
     print_matrix_and_stem_dict(matrix, stem_dict)
+
     
-    # Test comprehensive symmetry reduction
-    print("\n=== Testing comprehensive symmetry reduction ===")
-    symmetry_results = symmetry_reduction(matrix, rna_sequence, min_len=3)
+    ### Testing the reduction methods using hand made examples ###
+    # Test the reduction methods using the helper function
+    print("\n=== Testing reduction methods ===")
     
+    reduced_matrix, pos_mapping, reverse_mapping, modified_sequence = apply_reduction_method(
+        matrix, stem_dict, rna_sequence, method='idle_sequence', min_len=4
+    )
+    print_reduced_matrix_info(reduced_matrix, pos_mapping, reverse_mapping, matrix.shape[0], modified_sequence, min_stem, min_loop)
+
+    # Test the conversion function with example solution stems
+    print("\n=== Testing conversion function ===")
+
+    solution_stems = [(7, 12, 75, 80), (18, 22, 62, 66), (27, 30, 56, 59), (34, 37, 46, 49)]
+    print(f"Original solution stems: {solution_stems}")
+
+    reduced_solution_stems = [(7, 11, 69, 73), (15, 17, 53, 55), (24, 27, 49, 52), (31, 33, 40, 42)]
+    print(f"Reduced solution stems: {reduced_solution_stems}")
+    
+    # Convert back to original coordinates
+    converted_solution_stems = convert_reduced_solution_to_original(reverse_mapping, reduced_solution_stems)
+    print(f"Converted solution stems: {converted_solution_stems}")
+
+    # Create plots for both original and reduced solutions
+    make_plot(rna_sequence, solution_stems, '2_original_solution', seed=60, node_size_scale=0.3, edge_width_scale=0.3)
+    make_plot(rna_sequence, converted_solution_stems, '2_converted_solution', seed=50, node_size_scale=0.3, edge_width_scale=0.3)
+    make_plot(modified_sequence, reduced_solution_stems, '2_reduced_solution', seed=60, node_size_scale=0.3, edge_width_scale=0.3)
+    
+
+    """
+    #### MAXIMAL STEM REDUCTION ####
+    # Read the RNA sequence for idle sequence detection
+    with open(path) as f:
+        rna_sequence = "".join(("".join(line.split()[1:]) for line in f.readlines())).lower()
+    
+    matrix = text_to_matrix(path, min_loop)
+    matrix_copy = np.copy(matrix)
+    stem_dict = make_stem_dict(matrix_copy, min_stem, min_loop)
+
+    print_matrix_and_stem_dict(matrix, stem_dict)
+
+    
+    ### Testing the reduction methods using hand made examples ###
     # Test the reduction methods using the helper function
     print("\n=== Testing reduction methods ===")
     
@@ -1802,7 +1747,6 @@ def main(path, verbose, min_stem, min_loop, c):
     converted_solution_stems = convert_reduced_solution_to_original(reverse_mapping, reduced_solution_stems)
     print(f"Converted solution stems: {converted_solution_stems}")
 
-
     # Create plots for both original and reduced solutions
     make_plot(rna_sequence, solution_stems, 'original_solution', seed=50)
     make_plot(rna_sequence, converted_solution_stems, 'converted_solution', seed=50)
@@ -1817,7 +1761,9 @@ def main(path, verbose, min_stem, min_loop, c):
         matrix, stem_dict, rna_sequence, reduction_method='maximal_stem', 
         min_stem=min_stem, min_loop=min_loop, c=c, verbose=True
     )
-
+    """
+    
+    """
     # Test with idle sequence reduction
     print("\n--- Testing idle sequence reduction ---")
     original_stems_idle, reduced_stems_idle, modified_seq_idle = solve_reduced_problem(
@@ -1825,6 +1771,7 @@ def main(path, verbose, min_stem, min_loop, c):
         min_stem=min_stem, min_loop=min_loop, c=c, verbose=True, min_len=4
     )
     """
-
+    
+    
 if __name__ == "__main__":
     main()

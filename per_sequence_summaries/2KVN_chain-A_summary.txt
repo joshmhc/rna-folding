@@ -1,0 +1,5 @@
+> 2KVN | chain: A | length: 17
+sequence: GGUGAUUGAGUUCACCA
+dbn:      ((((((....)))))).
+pairs_count: 6
+paired_indices: (1,16) (2,15) (3,14) (4,13) (5,12) (6,11)

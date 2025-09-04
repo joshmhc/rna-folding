@@ -1,0 +1,5 @@
+> 8ZAU | chain: A | length: 69
+sequence: GCGGGCUGACCGACCCCCCGAGUUCGCUUGGGGACAACUAGACAUACAGUAUGAAAAUGCUGAGCCCGC
+dbn:      (((((((...((..(((((((((..)))))))))..)).()....)((((((....)))))).))))))
+pairs_count: 25
+paired_indices: (1,69) (2,68) (3,67) (4,66) (5,65) (6,64) (7,37) (11,41) (12,38) (15,34) (16,33) (17,32) (18,31) (19,30) (20,29) (21,28) (22,27) (23,26) (40,46) (47,62) (48,61) (49,60) (50,59) (51,58) (52,57)

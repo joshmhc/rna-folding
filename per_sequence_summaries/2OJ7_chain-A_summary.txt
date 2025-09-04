@@ -1,0 +1,5 @@
+> 2OJ7 | chain: A | length: 8
+sequence: GCUGUUGU
+dbn:      (((..)))
+pairs_count: 3
+paired_indices: (1,8) (2,7) (3,6)
