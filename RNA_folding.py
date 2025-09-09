@@ -1627,6 +1627,224 @@ def create_hairpin_example(reduced_sequence):
         # Create a simple stem
         return [(0, 0, len(reduced_sequence)-1, len(reduced_sequence)-1)]
 
+# =============================NEW QUBO BUILDER==================================
+# --- Turner 2004 ΔG°37 (kcal/mol) nearest-neighbor stacks ---
+# Key format: ((top_5to3_b1, top_5to3_b2), (bot_3to5_b1, bot_3to5_b2))
+# i.e., stack between pairs (i,j) and (i+1, j-1) in anti-parallel geometry:
+#   top dinucleotide = (b_i, b_{i+1})   [5'->3']
+#   bottom dinucleotide = (b_j, b_{j-1}) [3'->5']  ← matches Turner/NNDB tables
+#
+# Values below are taken from NNDB Turner 2004 pages. We list the unique entries
+# and then auto-fill symmetry-equivalent keys at runtime.
+
+TURNER_WC_STACKS = {
+    # From "Watson-Crick Helices" table (ΔG°37). See NNDB Turner 2004 WC page.
+    # 5'AA/3'UU etc.
+    (('A','A'), ('U','U')): -0.93,
+    (('A','U'), ('U','A')): -1.10,
+    (('U','A'), ('A','U')): -1.33,
+    (('C','U'), ('G','A')): -2.08,
+    (('C','A'), ('G','U')): -2.11,
+    (('G','U'), ('C','A')): -2.24,
+    (('A','C'), ('U','G')): -2.35,
+    (('U','C'), ('A','G')): -2.36,
+    (('G','G'), ('C','C')): -3.26,
+    (('G','C'), ('C','G')): -3.42,
+}
+
+# GU stacks (ΔG°37) including special contexts from NNDB "GU Pairs" page.
+# (Most GU stacks behave like NN stacks; special cases noted by Turner 2004.)
+TURNER_GU_STACKS = {
+    # Regular GU NN contexts (selected rows from the page)
+    (('A','G'), ('U','U')): -0.55,
+    (('A','U'), ('U','G')): -1.36,
+    (('G','U'), ('U','A')): -1.41,
+    (('U','G'), ('G','C')): -2.11,
+    (('G','G'), ('U','C')): -1.53,
+    (('G','U'), ('C','G')): -2.51,
+    (('G','C'), ('U','G')): -1.27,
+    (('U','G'), ('A','U')): -1.00,
+    (('U','G'), ('G','U')): +0.30,   # GU next to GU (non-favorable avg)
+    # Special tandem GU/UG context: 5'GGUC/3'CUGG → one parameter for THREE stacks
+    # We cannot encode a tri-stack in pure QUBO. We ignore this special tri-stack
+    # and use the local NN entries above; for exact treatment you’d need higher-order terms.
+}
+
+def _symmetrize_stacks(base_table):
+    """
+    Fill in symmetry-equivalent entries:
+      (top, bot) == (reverse_complement(bot), reverse_complement(top)) in an ideal 2-strand duplex,
+    and reversal within each strand (5'->3' vs 3'->5') leaves the ΔG° the same in Turner tables.
+    We’ll be pragmatic: add flipped-top, flipped-bot, and swapped-top/bot entries.
+    """
+    compl = {'A':'U','U':'A','G':'C','C':'G'}
+    def flip(dinuc):  # reverse the 2-mer
+        return (dinuc[1], dinuc[0])
+
+    table = dict(base_table)
+    added = True
+    while added:
+        added = False
+        for (top, bot), g in list(table.items()):
+            variants = [
+                (flip(top), bot),
+                (top, flip(bot)),
+                (flip(top), flip(bot)),
+                (bot, top),
+                (flip(bot), flip(top)),
+            ]
+            for k in variants:
+                if k not in table:
+                    table[k] = g
+                    added = True
+    return table
+
+STACKS = _symmetrize_stacks({**TURNER_WC_STACKS, **TURNER_GU_STACKS})
+
+# --- QUBO builder ------------------------------------------------------------
+
+def build_qubo_with_turner(seq,
+                           Lmin=3,
+                           allow_pseudoknots=False,
+                           A=25.0,              # non-overlap penalty weight
+                           K=25.0,              # pseudoknot penalty if used
+                           h0=1.0,              # isolated-pair penalty (positive)
+                           hairpin_short_bonus=0.0,
+                           allow_noncanonical=True,
+                           noncanon_linear_penalty=+1.5):
+    """
+    Build a QUBO (Q dict, var index map) for RNA secondary structure with:
+      - candidate pairs: WC + GU (+ optional noncanonical),
+      - Turner 2004 ΔG37 stacking bonuses for adjacent pairs,
+      - non-overlap (each nt pairs ≤1),
+      - optional no-pseudoknot constraint.
+
+    Args
+    ----
+    seq : str of A/C/G/U
+    Lmin : minimal loop length (j-i-1 >= Lmin)
+    allow_pseudoknots : if False, add positive penalty for crossing pairs
+    A : weight for non-overlap constraints (choose big)
+    K : weight for anti-pseudoknot (if !allow_pseudoknots)
+    h0 : linear penalty per selected pair (isolated-pair penalty)
+    hairpin_short_bonus : small extra linear penalty for ultra-short loops (>=0)
+    allow_noncanonical : include GA, AC, AA, CC, GG, UU, etc. as candidates
+    noncanon_linear_penalty : linear cost per noncanonical pair (>=0)
+
+    Returns
+    -------
+    Q : dict[(p,q)] -> coefficient  (p<=q), quadratic unconstrained binary form
+    idx : dict[(i,j)] -> variable index
+    meta : dict with helper fields (e.g., candidate list, which pairs are noncanonical)
+    """
+    n = len(seq)
+    # Allowed canonical pairs:
+    WC = {('A','U'),('U','A'),('G','C'),('C','G')}
+    wobble = {('G','U'),('U','G')}
+
+    def is_allowed_pair(a,b):
+        if (a,b) in WC or (a,b) in wobble:
+            return True
+        if allow_noncanonical:
+            return True
+        return False
+
+    # 1) Candidate pairs P
+    P = []
+    is_noncanon = {}
+    for i in range(n):
+        for j in range(i+1+Lmin, n):
+            a, b = seq[i], seq[j]
+            if not is_allowed_pair(a,b):
+                continue
+            P.append((i,j))
+            is_noncanon[(i,j)] = ((a,b) not in WC and (a,b) not in wobble)
+    idx = {p:k for k,p in enumerate(P)}
+
+    # 2) QUBO container
+    Q = {}
+    def add(k,l,val):
+        if val == 0.0: return
+        if k>l: k,l = l,k
+        Q[(k,l)] = Q.get((k,l), 0.0) + val
+
+    # 3) Linear terms: isolated-pair penalty (+ optional tiny loop-length tweak)
+    for (i,j), k in idx.items():
+        L = j - i - 1
+        base = h0
+        if hairpin_short_bonus and L <= 3:
+            base += hairpin_short_bonus
+        if is_noncanon[(i,j)]:
+            base += noncanon_linear_penalty  # allow noncanonical, but make it costly
+        add(k,k, base)
+
+    # 4) Stacking bonuses (quadratic): Turner ΔG°37 for adjacent (i,j) with (i+1,j-1)
+    def stack_dG(top_b1, top_b2, bot_b1, bot_b2):
+        # Expect key as ((t1,t2),(b1,b2)) with bottom given 3'->5'.
+        key = ((top_b1, top_b2), (bot_b1, bot_b2))
+        return STACKS.get(key, 0.0)  # if unknown (e.g., involves noncanonical), give 0.0
+
+    for (i,j), k in idx.items():
+        p = (i+1, j-1)
+        if p in idx:
+            l = idx[p]
+            # top 5'->3' = (seq[i], seq[i+1]); bottom 3'->5' = (seq[j], seq[j-1])
+            dG = stack_dG(seq[i], seq[i+1], seq[j], seq[j-1])
+            add(k, l, dG)  # NOTE: ΔG°37 are negative for stabilizing stacks
+
+    # 5) Non-overlap constraints: ∑_{pairs touching t} x_p ≤ 1
+    # Implement via A * (sum - 1)^2 per nucleotide t
+    for t in range(n):
+        touching = [idx[p] for p in P if p[0] == t or p[1] == t]
+        # diagonal
+        for k in touching:
+            add(k, k, A)
+        # off-diagonal (2A * x_k x_l)
+        for a in range(len(touching)):
+            for b in range(a+1, len(touching)):
+                add(touching[a], touching[b], 2*A)
+        # constant -A can be dropped
+
+    # 6) Optional: anti-pseudoknot
+    if not allow_pseudoknots:
+        for (i,j), k in idx.items():
+            for (u,v), l in idx.items():
+                if k >= l: continue
+                # crossing if i<u<j<v or u<i<v<j
+                if (i < u < j < v) or (u < i < v < j):
+                    add(k, l, K)
+
+    meta = {
+        "candidates": P,
+        "is_noncanonical": is_noncanon,
+        "notes": {
+            "turner_tables": "Turner 2004 ΔG°37 NN stacks (WC+GU).",
+            "end_penalties": "AU/GU end penalties & initiation are not included explicitly in QUBO; the linear h0 approximates loop/initiation costs.",
+            "special_GU_tristack": "The GGUC/CUGG tri-stack special case is not encoded (requires higher-order terms).",
+        }
+    }
+    return Q, idx, meta
+
+# =============================NEW QUBO BUILDER END==================================
+
+"""
+# Example usage of the new QUBO builder
+seq = "GGGAAACCCUUU"  # RNA sequence (A,C,G,U)
+Q, idx, meta = build_qubo_with_turner(seq,
+                                      Lmin=3,
+                                      allow_pseudoknots=False,
+                                      A=25.0, K=25.0,
+                                      h0=1.0,
+                                      hairpin_short_bonus=0.5,        # optional
+                                      allow_noncanonical=True,
+                                      noncanon_linear_penalty=1.5)
+
+# Q is a dict {(p,q): coeff} (p<=q). Feed it to your QUBO annealer.
+# After solving for x in {0,1}^|P|, the chosen base pairs are:
+chosen_pairs = [pair for pair, var in idx.items() if x[var] == 1]
+"""
+
+
 
 # Create command line functionality.
 DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'NC_008516.txt')
