@@ -1628,12 +1628,72 @@ def create_hairpin_example(reduced_sequence):
         # Create a simple stem
         return [(0, 0, len(reduced_sequence)-1, len(reduced_sequence)-1)]
 
+def pairs_to_stems(selected_pairs):
+
+    """Group selected base pairs (i,j) into contiguous stems.
+
+    Args:
+        selected_pairs (Iterable[Tuple[int,int]]): Set/list of chosen base pairs (i<j).
+
+    Returns:
+        list: List of stems as 4-tuples (i_start, i_end, j_start, j_end).
+    """
+    pair_set = set(selected_pairs)
+    used = set()
+    stems = []
+
+    for (i, j) in sorted(pair_set):
+        if (i, j) in used:
+            continue
+
+        # Extend outward to get outermost pair of this stack
+        si, sj = i, j
+        while (si - 1, sj + 1) in pair_set:
+            si -= 1
+            sj += 1
+
+        # Extend inward to get innermost pair
+        ei, ej = i, j
+        while (ei + 1, ej - 1) in pair_set:
+            ei += 1
+            ej -= 1
+
+        # Mark all pairs in this stem as used
+        for t in range(ei - si + 1):
+            used.add((si + t, sj - t))
+
+        # Save as (min_i, max_i, min_j, max_j)
+        stems.append((si, ei, ej, sj))
+
+    return stems
+
+
 # =============================NEW QUBO BUILDER==================================
+# === Ocean CQM builder for RNA secondary structure ===========================
+# Variables: one binary x_(i,j) per candidate base pair (i<j) with loop >= Lmin.
+# Objective:
+#   + linear: isolated-pair penalty h0, noncanonical penalty, hairpin end ΔG(L)
+#   + quadratic: Turner 2004 ΔG°37 nearest-neighbor stacks (WC+GU),
+#                - hairpin end cancellation with inner neighbor,
+#                - AU/GU end penalties canceled by neighbor stacks
+# Constraints (CQM):
+#   - For each nucleotide t: sum_{pairs touching t} x_(i,j) <= 1
+#   - (optional) No pseudoknots: for each crossing pair pair, x_p + x_q <= 1
+#
+# Notes:
+# - Pair labels are tuples (i,j) and used directly as variable labels in dimod.
+# - Turner stack table below is a compact subset (WC + GU) with symmetrization.
+# - Hairpin penalties are provided via a callback hairpin_fn(L) you can customize.
+# ============================================================================
 
-# ---- Turner 2004 ΔG°37 nearest-neighbor stacks (kcal/mol) ----
+# ---- Turner 2004 ΔG°37 NN stacks (kcal/mol): compact core set (WC + GU) ----
 # Key: ((top_5to3_b1, top_5to3_b2), (bot_3to5_b1, bot_3to5_b2))
-# Only unique entries listed; we'll symmetrize below.
 
+# =========================
+# Helpers
+# =========================
+
+# --- Turner 2004 ΔG°37 nearest-neighbor stacks (kcal/mol): WC + GU core ---
 TURNER_WC_STACKS = {
     (('A','A'), ('U','U')): -0.93,
     (('A','U'), ('U','A')): -1.10,
@@ -1646,7 +1706,6 @@ TURNER_WC_STACKS = {
     (('G','G'), ('C','C')): -3.26,
     (('G','C'), ('C','G')): -3.42,
 }
-
 TURNER_GU_STACKS = {
     (('A','G'), ('U','U')): -0.55,
     (('A','U'), ('U','G')): -1.36,
@@ -1656,24 +1715,19 @@ TURNER_GU_STACKS = {
     (('G','U'), ('C','G')): -2.51,
     (('G','C'), ('U','G')): -1.27,
     (('U','G'), ('A','U')): -1.00,
-    (('U','G'), ('G','U')): +0.30,  # GU next to GU (weakly unfavorable on avg)
+    (('U','G'), ('G','U')): +0.30,
 }
 
 def _symmetrize_stacks(base_table):
-    def flip(d):  # reverse dinucleotide order
-        return (d[1], d[0])
+    """Add reverse/flip symmetries for dinucleotide stacks."""
+    def flip(d): return (d[1], d[0])
     table = dict(base_table)
     added = True
     while added:
         added = False
         for (top, bot), g in list(table.items()):
-            for k in [
-                (flip(top), bot),
-                (top, flip(bot)),
-                (flip(top), flip(bot)),
-                (bot, top),
-                (flip(bot), flip(top)),
-            ]:
+            for k in [(flip(top), bot), (top, flip(bot)), (flip(top), flip(bot)),
+                      (bot, top), (flip(bot), flip(top))]:
                 if k not in table:
                     table[k] = g
                     added = True
@@ -1681,170 +1735,172 @@ def _symmetrize_stacks(base_table):
 
 STACKS = _symmetrize_stacks({**TURNER_WC_STACKS, **TURNER_GU_STACKS})
 
-def _add(Q, k, l, val):
-    if val == 0.0: return
-    if k > l: k, l = l, k
-    Q[(k, l)] = Q.get((k, l), 0.0) + val
+def hairpin_T04(L: int) -> float:
+    """Coarse ΔG°37(L) penalty (kcal/mol) for hairpin closure. Tweak as you wish."""
+    if L < 3:
+        return 1e6  # forbid impossible/very tight loops
+    # short loops: stronger penalties
+    table = {3: 5.2, 4: 4.9, 5: 4.5, 6: 4.2}
+    if L in table:
+        return table[L]
+    # longer loops: gentle decay; keeps a baseline cost
+    return 4.0 + 0.2 * math.log(L / 8.0)
 
-def build_qubo_with_turner_refined(
-    seq,
-    Lmin=3,
-    allow_pseudoknots=False,
-    # constraint weights
-    A=25.0,          # non-overlap
-    K=25.0,          # anti-pseudoknot (used only if allow_pseudoknots=False)
-    # baseline linear
-    h0=1.0,          # isolated-pair penalty
-    # hairpin end penalty (only charged for helix-end pairs)
-    hairpin_penalty_fn=lambda L: 0.0,  # user-supplied ΔG(L) for hairpin loop length L
-    # helix-end penalties (per end; canceled if neighboring stack exists)
-    au_end_pen=0.0,  # per-end penalty for AU ends
-    gu_end_pen=0.0,  # per-end penalty for GU ends
-    # noncanonical options
-    allow_noncanonical=True,
-    noncanon_linear_penalty=+1.5
-):
-    """
-    Build a QUBO for RNA secondary structure.
+# ---- Utilities ----------------------------------------------------------
+def stack_dG(top1, top2, bot1, bot2):
+    """Lookup Turner ΔG°37 for a 5'->3' top dinuc and 3'->5' bottom dinuc."""
+    return STACKS.get(((top1, top2), (bot1, bot2)), 0.0)
 
-    Variables:
-      x_{ij} for candidate pairs (i<j, j-i-1 >= Lmin).
-      Candidates include WC + GU; optionally noncanonical pairs (with linear penalty).
+def crossing(p, q):
+    """Return True if pair p=(i,j) crosses q=(u,v): i<u<j<v or u<i<v<j."""
+    (i, j), (u, v) = p, q
+    return (i < u < j < v) or (u < i < v < j)
 
-    Terms:
-      - Turner 2004 NN stacking bonuses between (i,j) and (i+1,j-1) [quadratic, usually negative].
-      - Non-overlap penalties: A * (sum_{pairs touching t} - 1)^2 for each nucleotide t.
-      - Optional anti-pseudoknot: +K * x_{ij} x_{kl} for any crossing pairs (i<k<j<l).
-      - Isolated-pair penalty: +h0 * x_{ij}.
-      - Hairpin end penalty: +H(L)*x_{ij} - H(L)*x_{ij}*x_{i+1,j-1}  (pays only at helix ends).
-      - AU/GU end penalties per end: +pen*x_{ij} - pen*x_{ij}*x_{neighbor}  (only terminal ends pay).
-      - Noncanonical linear penalty: +noncanon_linear_penalty * x_{ij}.
-
-    Returns:
-      Q   : dict[(p,q)] -> coeff  (upper-triangular)
-      idx : dict[(i,j)] -> var index
-      meta: helper info (candidate list, flags)
-    """
+def enumerate_candidates(seq, Lmin, allow_noncanonical):
+    """Enumerate candidate base pairs and flag noncanonicals."""
     n = len(seq)
     WC = {('A','U'), ('U','A'), ('G','C'), ('C','G')}
     wobble = {('G','U'), ('U','G')}
 
-    def is_allowed_pair(a, b):
-        if (a, b) in WC or (a, b) in wobble:
-            return True
-        return allow_noncanonical
+    def allowed(a, b):
+        return (a, b) in WC or (a, b) in wobble or allow_noncanonical
 
-    # 1) Candidate pairs
-    P = []
-    is_noncanon = {}
+    P, is_noncanon = [], {}
     for i in range(n):
         for j in range(i + 1 + Lmin, n):
             a, b = seq[i], seq[j]
-            if not is_allowed_pair(a, b):
-                continue
-            P.append((i, j))
-            is_noncanon[(i, j)] = ((a, b) not in WC and (a, b) not in wobble)
+            if allowed(a, b):
+                P.append((i, j))
+                is_noncanon[(i, j)] = ((a, b) not in WC and (a, b) not in wobble)
+    return P, is_noncanon
 
-    idx = {p: k for k, p in enumerate(P)}
-    Q = {}
+# =========================
+# CQM Builder
+# =========================
+def build_cqm_secondary_turner(
+    seq: str,
+    Lmin: int = 3,
+    *,
+    forbid_pseudoknots: bool = True,
+    # objective components (kcal/mol; + = penalty, − = bonus)
+    h0: float = 1.0,                       # isolated-pair penalty
+    hairpin_fn=lambda L: 0.0,              # ΔG°37(L) at helix ends
+    au_end_pen: float = 0.0,               # AU terminal end penalty (per end)
+    gu_end_pen: float = 0.0,               # GU terminal end penalty (per end)
+    allow_noncanonical: bool = True,
+    noncanon_linear_penalty: float = 1.5,
+    pseudoknot_soft_penalty: float | None = None  # if allowing PKs, add to objective
+):
+    """
+    Build a dimod.ConstrainedQuadraticModel for RNA secondary structure.
 
-    # 2) Linear: isolated-pair + noncanonical penalty
-    for (i, j), k in idx.items():
-        base = h0 + (noncanon_linear_penalty if is_noncanon[(i, j)] else 0.0)
-        _add(Q, k, k, base)
+    Variables: one binary x_(i,j) per candidate pair (i<j, loop >= Lmin).
+    Objective: Turner stacks (quadratic) + linear penalties/bonuses (isolated, hairpin-ends,
+               AU/GU ends, noncanonical) + optional soft PK penalties.
+    Hard constraints: non-overlap per nucleotide; optional no-pseudoknots.
+    """
+    n = len(seq)
+    # 1) Candidates
+    P, is_noncanon = enumerate_candidates(seq, Lmin, allow_noncanonical)
 
-    # 3) Stacking bonuses from Turner 2004 (between (i,j) and (i+1,j-1))
-    def stack_dG(t1, t2, b1, b2):
-        # key expects ((top5->3), (bot3->5))
-        return STACKS.get(((t1, t2), (b1, b2)), 0.0)
+    # 2) Build objective as a BQM (then lift to CQM)
+    lin = defaultdict(float)
+    quad = defaultdict(float)
 
-    for (i, j), k in idx.items():
-        ip, jp = i + 1, j - 1
-        p = (ip, jp)
-        if p in idx:
-            l = idx[p]
-            dG = stack_dG(seq[i], seq[ip], seq[j], seq[jp])  # negative => stabilizing
-            _add(Q, k, l, dG)
+    def add_lin(p, v): lin[p] += v
+    def add_quad(p, q, v):
+        if v == 0.0 or p == q: return
+        a, b = (p, q) if p < q else (q, p)
+        quad[(a, b)] += v
 
-    # 4) Hairpin end penalty: +H(L) on (i,j), subtract if inner neighbor present
-    for (i, j), k in idx.items():
+    # 2a) Isolated & noncanonical penalties (linear)
+    for p in P:
+        add_lin(p, h0 + (noncanon_linear_penalty if is_noncanon[p] else 0.0))
+
+    # 2b) Nearest-neighbor stacking bonuses (quadratic)
+    for (i, j) in P:
+        inner = (i + 1, j - 1)
+        if inner in P:
+            dG = stack_dG(seq[i], seq[i+1], seq[j], seq[j-1])  # negative = stabilizing
+            add_quad((i, j), inner, dG)
+
+    # 2c) Hairpin end penalty via cancellation with inner neighbor
+    for (i, j) in P:
         L = j - i - 1
-        H = hairpin_penalty_fn(L)
+        H = hairpin_fn(L)
         if H != 0.0:
-            _add(Q, k, k, +H)
+            add_lin((i, j), +H)
             inner = (i + 1, j - 1)
-            if inner in idx:
-                _add(Q, k, idx[inner], -H)
+            if inner in P:
+                add_quad((i, j), inner, -H)
 
-    # 5) AU/GU end penalties (per end), canceled by neighbor stacks
-    def end_penalty_for_pair(a, b):
+    # 2d) AU/GU terminal-end penalties (per end), canceled by neighbor stacks
+    def end_pen(a, b):
         if (a, b) in {('A','U'), ('U','A')}: return au_end_pen
         if (a, b) in {('G','U'), ('U','G')}: return gu_end_pen
         return 0.0
 
-    for (i, j), k in idx.items():
-        a, b = seq[i], seq[j]
-        pen = end_penalty_for_pair(a, b)
-        if pen == 0.0: 
-            continue
+    for (i, j) in P:
+        pen = end_pen(seq[i], seq[j])
+        if pen == 0.0: continue
         # inner end
-        _add(Q, k, k, +pen)
+        add_lin((i, j), +pen)
         inner = (i + 1, j - 1)
-        if inner in idx:
-            _add(Q, k, idx[inner], -pen)
+        if inner in P:
+            add_quad((i, j), inner, -pen)
         # outer end
-        _add(Q, k, k, +pen)
+        add_lin((i, j), +pen)
         outer = (i - 1, j + 1)
-        if outer in idx:
-            _add(Q, k, idx[outer], -pen)
+        if outer in P:
+            add_quad((i, j), outer, -pen)
 
-    # 6) Non-overlap constraints
+    # 2e) (Optional) soft pseudoknot penalty in the objective
+    if pseudoknot_soft_penalty and pseudoknot_soft_penalty > 0:
+        for a in range(len(P)):
+            p = P[a]
+            for b in range(a + 1, len(P)):
+                q = P[b]
+                if crossing(p, q):
+                    add_quad(p, q, +pseudoknot_soft_penalty)
+
+    bqm = dimod.BinaryQuadraticModel(dict(lin), dict(quad), 0.0, vartype=dimod.BINARY)
+
+    # 3) Promote to CQM and add hard constraints
+    cqm = dimod.CQM()
+    cqm.set_objective(bqm)
+
+    # 3a) Non-overlap: each nucleotide pairs at most once
     for t in range(n):
-        touching = [idx[p] for p in P if p[0] == t or p[1] == t]
-        for k in touching:
-            _add(Q, k, k, A)
-        for a in range(len(touching)):
-            for b in range(a + 1, len(touching)):
-                _add(Q, touching[a], touching[b], 2 * A)
-        # constant -A per t omitted
+        touching = [p for p in P if p[0] == t or p[1] == t]
+        if touching:
+            cqm.add_constraint(dimod.quicksum(dimod.Binary(p) for p in touching) <= 1,
+                               label=f"nonoverlap_t{t}")
 
-    # 7) Optional anti-pseudoknot (forbid crossings)
-    if not allow_pseudoknots:
-        for (i, j), k in idx.items():
-            for (u, v), l in idx.items():
-                if k >= l: 
-                    continue
-                if (i < u < j < v) or (u < i < v < j):
-                    _add(Q, k, l, K)
+    # 3b) (Optional) hard no-pseudoknot constraints
+    if forbid_pseudoknots:
+        for a in range(len(P)):
+            p = P[a]
+            for b in range(a + 1, len(P)):
+                q = P[b]
+                if crossing(p, q):
+                    cqm.add_constraint(dimod.Binary(p) + dimod.Binary(q) <= 1,
+                                       label=f"no_pk_{p}_{q}")
 
+    # meta data for the model
     meta = {
         "candidates": P,
         "is_noncanonical": is_noncanon,
         "notes": {
-            "stacks": "Turner 2004 ΔG°37 NN stacks (WC + GU).",
-            "hairpin": "Hairpin penalty H(L) charged only at helix ends (canceled by inner stack).",
-            "ends": "AU/GU end penalties per end; canceled by neighbor stack terms.",
-            "params": {"A": A, "K": K, "h0": h0,
-                       "au_end_pen": au_end_pen, "gu_end_pen": gu_end_pen,
+            "objective": "Turner NN stacks + linear penalties/bonuses; negative ΔG favored",
+            "constraints": f"non-overlap hard; pseudoknots {'forbidden' if forbid_pseudoknots else 'allowed/soft'}",
+            "params": {"Lmin": Lmin, "h0": h0, "au_end_pen": au_end_pen,
+                       "gu_end_pen": gu_end_pen, "allow_noncanonical": allow_noncanonical,
                        "noncanon_linear_penalty": noncanon_linear_penalty}
         }
     }
-    return Q, idx, meta
-
-
-def hairpin_T04(L: int) -> float:
-    if L < 3:
-        return 1e6  # forbid <3
-    table = {
-        3: 5.4, 4: 5.1, 5: 4.6, 6: 4.4, 7: 4.3, 8: 4.2, 9: 4.1, 10: 4.1,
-        # extend or switch to a smooth decay for larger L
-    }
-    if L in table:
-        return table[L]
-    # simple gentle decay for larger loops (tune as you like)
-    return 4.1 + 0.3 * math.log(L/10.0)
-
+    return cqm, meta
 # =============================NEW QUBO BUILDER END==================================
+
 
 # Create command line functionality.
 DEFAULT_PATH = join(dirname(__file__), 'RNA_text_files', 'NC_008516.txt')
@@ -1883,56 +1939,30 @@ def main(path, verbose, min_stem, min_loop, c):
     Returns:
         None: None
     """
-
     
     seq = "GGGAAACCCUUU"
 
-    Q, idx, meta = build_qubo_with_turner_refined(
+    cqm, meta = build_cqm_secondary_turner(
         seq,
         Lmin=3,
-        allow_pseudoknots=False,
-        A=25.0, K=25.0,
+        forbid_pseudoknots=False,
         h0=1.0,
-        hairpin_penalty_fn=hairpin_T04, # Hairpin penalty function
-        au_end_pen=0.0,
-        gu_end_pen=0.0,
+        hairpin_fn=hairpin_T04,
+        au_end_pen=0.5,
+        gu_end_pen=0.3,
         allow_noncanonical=True,
-        noncanon_linear_penalty=1.5
+        noncanon_linear_penalty=2.0,
+        pseudoknot_soft_penalty=2.0,
     )
 
-    # Feed Q to your annealer. After solving, selected pairs are:
-    # chosen = [pair for pair, var in idx.items() if x[var] == 1]
-
-    if verbose:
-        print('\nPreprocessing data from:', path)
-
-    matrix = text_to_matrix(path, min_loop)
-    stem_dict = make_stem_dict(matrix, min_stem, min_loop)
-
-    if stem_dict:
-        cqm = build_cqm(stem_dict, min_stem, c)
-    else:
-        print('\nNo possible stems were found. You may need to check your parameters.')
-        return None
-
-    if verbose:
-        print('Connecting to Solver...')
-
     sampler = LeapHybridCQMSampler()
+    sampleset = sampler.sample_cqm(cqm)
+    sampleset.resolve()
+    best = sampleset.filter(lambda s: s.is_feasible).first or sampleset.first
 
-    if verbose:
-        print('Finding Solution...')
-
-    sample_set = sampler.sample_cqm(cqm)
-    sample_set.resolve()
-
-    if verbose:
-        print('Processing solution...')
-
-    stems = process_cqm_solution(sample_set, verbose)
-    make_plot(path, stems)
-
-
+    chosen_pairs = [p for p, v in best.sample.items() if v == 1 and isinstance(p, tuple)]
+    stems = pairs_to_stems(chosen_pairs)
+    make_plot(seq, stems)
 
 
     """
