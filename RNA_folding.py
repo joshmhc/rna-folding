@@ -1786,13 +1786,13 @@ def run_rna_folding_pipeline(seq: str, output_prefix: str = None) -> tuple:
         seq,
         Lmin=3,
         forbid_pseudoknots=False,
-        h0=1.0,
-        hairpin_fn=hairpin_T04,
-        au_end_pen=0.5,
-        gu_end_pen=0.3,
+        h0=0.1,
+        hairpin_fn=lambda L: 0.0,
+        au_end_pen=0.0,
+        gu_end_pen=0.0,
         allow_noncanonical=True,
-        noncanon_linear_penalty=2.0,
-        pseudoknot_soft_penalty=2.0,
+        noncanon_linear_penalty=0.1,
+        pseudoknot_soft_penalty=0.1,
     )
 
     sampler = LeapHybridCQMSampler()
@@ -1961,15 +1961,15 @@ def build_cqm_secondary_turner(
     seq: str,
     Lmin: int = 3,
     *,
-    forbid_pseudoknots: bool = True,
+    forbid_pseudoknots: bool = False,
     # objective components (kcal/mol; + = penalty, − = bonus)
     h0: float = 1.0,                       # isolated-pair penalty
     hairpin_fn=lambda L: 0.0,              # ΔG°37(L) at helix ends
-    au_end_pen: float = 0.0,               # AU terminal end penalty (per end)
-    gu_end_pen: float = 0.0,               # GU terminal end penalty (per end)
+    au_end_pen: float = 0.5,               # AU terminal end penalty (per end)
+    gu_end_pen: float = 0.3,               # GU terminal end penalty (per end)
     allow_noncanonical: bool = True,
-    noncanon_linear_penalty: float = 1.5,
-    pseudoknot_soft_penalty: Optional[float] = None  # if allowing PKs, add to objective
+    noncanon_linear_penalty: float = 2.0,
+    pseudoknot_soft_penalty: Optional[float] = 2.0  # if allowing PKs, add to objective
 ):
     """
     Build a dimod.ConstrainedQuadraticModel for RNA secondary structure.
@@ -2124,7 +2124,12 @@ def main(path, verbose, min_stem, min_loop, c):
     # Process a single sequence (one by one)
     PBD_ID = "1LU3"
     seq = load_sequence_from_sequences_txt(f"{PBD_ID}.txt")
+    print(f"Sequence: {seq} (length: {len(seq)})")
+    
     chosen_pairs, stems, cqm, meta = run_rna_folding_pipeline(seq, f"{PBD_ID}_result")
+    
+    # Save results to files
+    save_results_to_file(seq, chosen_pairs, stems, meta, PBD_ID)
 
     # Process multiple sequences from a list file (choose from RNA_others.txt or tRNA.txt)
     # process_sequence_list("tRNA.txt")
