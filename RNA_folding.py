@@ -26,6 +26,7 @@ import numpy as np
 import networkx as nx
 import dimod
 import math
+from typing import Optional
 from dwave.system import LeapHybridCQMSampler
 try:
     import matplotlib.pyplot as plt
@@ -1746,6 +1747,103 @@ def hairpin_T04(L: int) -> float:
     # longer loops: gentle decay; keeps a baseline cost
     return 4.0 + 0.2 * math.log(L / 8.0)
 
+# ---- I/O helper ----------------------------------------------------------
+def load_sequence_from_sequences_txt(file_name: str) -> str:
+    """Load an RNA sequence from sequences_txt/<file_name>.
+
+    Expected format per line: ID TOKEN1 TOKEN2 ...
+    All tokens after the first are concatenated across lines.
+
+    Returns uppercase sequence consisting of A/C/G/U only.
+    """
+    seq_path = join(dirname(__file__), 'sequences_txt', file_name)
+    pieces = []
+    with open(seq_path) as f:
+        for line in f:
+            tokens = line.strip().split()
+            if len(tokens) >= 2:
+                pieces.append(''.join(tokens[1:]))
+
+    seq = ''.join(pieces).upper()
+    if not seq:
+        raise ValueError(f"No sequence parsed from {seq_path}. Each line should be: 'ID SEQ...'")
+    invalid = set(seq) - set('ACGU')
+    if invalid:
+        raise ValueError(f"Invalid characters in sequence: {sorted(invalid)}")
+    return seq
+
+def run_rna_folding_pipeline(seq: str, output_prefix: str = None) -> tuple:
+    """Run the complete RNA folding pipeline on a sequence.
+    
+    Args:
+        seq (str): RNA sequence string
+        output_prefix (str): Prefix for output files (default: sequence name)
+        
+    Returns:
+        tuple: (chosen_pairs, stems, cqm, meta)
+    """
+    cqm, meta = build_cqm_secondary_turner(
+        seq,
+        Lmin=3,
+        forbid_pseudoknots=False,
+        h0=1.0,
+        hairpin_fn=hairpin_T04,
+        au_end_pen=0.5,
+        gu_end_pen=0.3,
+        allow_noncanonical=True,
+        noncanon_linear_penalty=2.0,
+        pseudoknot_soft_penalty=2.0,
+    )
+
+    sampler = LeapHybridCQMSampler()
+    sampleset = sampler.sample_cqm(cqm)
+    sampleset.resolve()
+    best = sampleset.filter(lambda s: s.is_feasible).first or sampleset.first
+
+    chosen_pairs = [p for p, v in best.sample.items() if v == 1 and isinstance(p, tuple)]
+    stems = pairs_to_stems(chosen_pairs)
+    
+    if output_prefix:
+        make_plot(seq, stems, output_prefix)
+    
+    return chosen_pairs, stems, cqm, meta
+
+def process_sequence_list(list_file: str):
+    """Process multiple RNA sequences from a list file.
+    
+    Args:
+        list_file (str): Path to file containing sequence filenames (one per line, no .txt extension)
+    """
+    list_path = join(dirname(__file__), list_file)
+    
+    with open(list_path) as f:
+        filenames = [line.strip() for line in f if line.strip()]
+    
+    print(f"Processing {len(filenames)} sequences from {list_file}")
+    
+    for i, filename in enumerate(filenames, 1):
+        print(f"\n--- Processing {i}/{len(filenames)}: {filename} ---")
+        
+        try:
+            # Load sequence
+            seq = load_sequence_from_sequences_txt(f"{filename}.txt")
+            print(f"PBD ID: {filename}")
+            print(f"Sequence: {seq}")
+            
+            # Run pipeline
+            chosen_pairs, stems, cqm, meta = run_rna_folding_pipeline(seq, f"{filename}_result")
+            
+            print(f"Found {len(chosen_pairs)} base pairs")
+            print(f"Grouped into {len(stems)} stems")
+            if stems:
+                print(f"Stems: {stems}")
+                
+        except Exception as e:
+            print(f"Error processing {filename}: {e}")
+            continue
+    
+    print(f"\nCompleted processing {len(filenames)} sequences")
+
 # ---- Utilities ----------------------------------------------------------
 def stack_dG(top1, top2, bot1, bot2):
     """Lookup Turner ΔG°37 for a 5'->3' top dinuc and 3'->5' bottom dinuc."""
@@ -1789,7 +1887,7 @@ def build_cqm_secondary_turner(
     gu_end_pen: float = 0.0,               # GU terminal end penalty (per end)
     allow_noncanonical: bool = True,
     noncanon_linear_penalty: float = 1.5,
-    pseudoknot_soft_penalty: float | None = None  # if allowing PKs, add to objective
+    pseudoknot_soft_penalty: Optional[float] = None  # if allowing PKs, add to objective
 ):
     """
     Build a dimod.ConstrainedQuadraticModel for RNA secondary structure.
@@ -1802,6 +1900,7 @@ def build_cqm_secondary_turner(
     n = len(seq)
     # 1) Candidates
     P, is_noncanon = enumerate_candidates(seq, Lmin, allow_noncanonical)
+    Pset = set(P)
 
     # 2) Build objective as a BQM (then lift to CQM)
     lin = defaultdict(float)
@@ -1820,7 +1919,7 @@ def build_cqm_secondary_turner(
     # 2b) Nearest-neighbor stacking bonuses (quadratic)
     for (i, j) in P:
         inner = (i + 1, j - 1)
-        if inner in P:
+        if inner in Pset:
             dG = stack_dG(seq[i], seq[i+1], seq[j], seq[j-1])  # negative = stabilizing
             add_quad((i, j), inner, dG)
 
@@ -1831,7 +1930,7 @@ def build_cqm_secondary_turner(
         if H != 0.0:
             add_lin((i, j), +H)
             inner = (i + 1, j - 1)
-            if inner in P:
+            if inner in Pset:
                 add_quad((i, j), inner, -H)
 
     # 2d) AU/GU terminal-end penalties (per end), canceled by neighbor stacks
@@ -1846,12 +1945,12 @@ def build_cqm_secondary_turner(
         # inner end
         add_lin((i, j), +pen)
         inner = (i + 1, j - 1)
-        if inner in P:
+        if inner in Pset:
             add_quad((i, j), inner, -pen)
         # outer end
         add_lin((i, j), +pen)
         outer = (i - 1, j + 1)
-        if outer in P:
+        if outer in Pset:
             add_quad((i, j), outer, -pen)
 
     # 2e) (Optional) soft pseudoknot penalty in the objective
@@ -1940,30 +2039,14 @@ def main(path, verbose, min_stem, min_loop, c):
         None: None
     """
     
-    seq = "GGGAAACCCUUU"
+    # Process a single sequence
+    PBD_ID = "XXXX"
+    seq = load_sequence_from_sequences_txt(f"{PBD_ID}.txt")
+    print(seq)
+    chosen_pairs, stems, cqm, meta = run_rna_folding_pipeline(seq, f"{PBD_ID}_result")
 
-    cqm, meta = build_cqm_secondary_turner(
-        seq,
-        Lmin=3,
-        forbid_pseudoknots=False,
-        h0=1.0,
-        hairpin_fn=hairpin_T04,
-        au_end_pen=0.5,
-        gu_end_pen=0.3,
-        allow_noncanonical=True,
-        noncanon_linear_penalty=2.0,
-        pseudoknot_soft_penalty=2.0,
-    )
-
-    sampler = LeapHybridCQMSampler()
-    sampleset = sampler.sample_cqm(cqm)
-    sampleset.resolve()
-    best = sampleset.filter(lambda s: s.is_feasible).first or sampleset.first
-
-    chosen_pairs = [p for p, v in best.sample.items() if v == 1 and isinstance(p, tuple)]
-    stems = pairs_to_stems(chosen_pairs)
-    make_plot(seq, stems)
-
+    # Process multiple sequences from a list file
+    process_sequence_list("sequence_list.txt")
 
     """
     #### IDLE SEQUENCE REDUCTION ####
