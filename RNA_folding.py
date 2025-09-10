@@ -1827,12 +1827,6 @@ def save_results_to_file(seq: str, chosen_pairs: list, stems: list, meta: dict, 
         os.makedirs(results_dir)
         print(f"Created results directory: {results_dir}")
     
-    # Save sequence
-    seq_file = join(results_dir, f"{output_prefix}_sequence.txt")
-    with open(seq_file, 'w') as f:
-        f.write(f"Sequence: {seq}\n")
-        f.write(f"Length: {len(seq)}\n")
-    
     # Save base pairs
     pairs_file = join(results_dir, f"{output_prefix}_base_pairs.txt")
     with open(pairs_file, 'w') as f:
@@ -1888,7 +1882,6 @@ def save_results_to_file(seq: str, chosen_pairs: list, stems: list, meta: dict, 
                 f.write(f"  {stem}\n")
     
     print(f"Results saved to {results_dir}/")
-    print(f"  - {output_prefix}_sequence.txt")
     print(f"  - {output_prefix}_base_pairs.txt") 
     print(f"  - {output_prefix}_stems.txt")
     print(f"  - {output_prefix}_metadata.json")
