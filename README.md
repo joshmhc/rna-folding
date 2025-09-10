@@ -5,170 +5,144 @@
   https://circleci.com/gh/dwave-examples/rna-folding.svg?style=shield)](
   https://circleci.com/gh/dwave-examples/rna-folding)
 
-# RNA Folding
+# Improvements to RNA Folding Demo Program.
 
-In biology and chemistry, the properties of a molecule are not solely determined
-by a set of atoms but also by the shape of the molecule. In genetics, the shape
-of an RNA molecule is largely determined by how it bends back on itself. The
-sequence of A’s, U’s, G’s, and C’s that make up RNA has certain pairs that are
-drawn together to form hydrogen bonds. A sequence of several bonds in a row is
-called a stem, and a stem provides sufficient force to keep the molecule folded
-together. RNA molecules naturally form some stems while avoiding others in a
-manner that minimizes the free energy of the system.
+This is an improvement to the RNA Folding Program based on Fox DM et al "RNA folding using quantum computers".
 
-This demo program takes an RNA sequence and applies a quadratic model in pursuit
-of the optimal stem configuration.
+Two different improvements are implemented. One uses classical reduction techniques to reduce the problem size in various ways, which include mergin maximal stem, removing idle base sequence, and leveraging symmetry. The other includes further factors to the RNA folding process, which is mainly based on the result published on "Turner/Mathews nearest-neighbor (NN)".
 
-![Figure 1! ](readme_imgs/Single_Stem.png "Simple single stem plot")
+# Classical Reduction Techniques
 
-<p>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; 
-Fig.1 - An RNA sequence with a single stem of length 4.
-</p>
+- Maximal Stem
+    - Assume that the maximal stem of the bonding matrix must be formed in the optimal secondary structure.
+    - Reduce the graph by creating a super-stem consisting of only two bases which are already bonded.
+    - Run the problem on the sampler.
+    - Retrieve the solution, and convert it back to the solution to the larger problem.
+- Idle Base Sequence
+    - Repeated bases which is not part of a potential stem can be reduced.
+    - Reduce the graph by creating a super-node which does not bond.
+    - Run the problem on the sampler.
+    - Retrieve the solution, and convert it back to the solution to the larger problem.
+- Palindromic symmetry
+    - Assume that a long palindromic sequence is likely to fold (form a loop) at its center, creating a hairpin structure.
 
-Predicting the existence of stems is important to predicting the properties of
-the RNA molecule. However, prediction is complicated by two important factors. 
+# Additional Factors to the Hamiltonian
 
-First, stems are not allowed to overlap. A simple case of overlapping can be
-illustrated by Figure 1. The stem expressed by the pink lines can be denoted
-with the tuple (2, 5, 12, 15). Here, indexing starts with 0 at the far left C
-and continues along the sequence represented by the gray edges, ending with
-index 16 at the bottom-most C. The indices of the eight nucleotides in the stem
-are labeled in the figure. The four pink edges illustrate the four bonds that
-make up the stem. While there are eight nucleotides in the stem, bonded along
-pink lines, the 4-tuple completely determines the stem. However, the smaller
-stems (2, 4, 13, 15) and (3, 5, 12, 14) also need to be considered, even though
-the optimal solution will not include them in this case. Note that by default,
-we will only consider stems with length at least 3, as smaller stems are
-unlikely to form and sustain bonds.
+## Variables
 
-Second, the intertwining phenomenon known as a pseudoknot is less energetically
-favorable. In Figure 2, we see an example of such a pseudoknot, where one side
-of a stem occurs in between the two sides of a different stem. The use of a
-quadratic objective allows us to make pseudoknots less likely to occur in
-optimal solutions, increasing overall accuracy. Specifically, we include a
-quadratic term for each pair of stems that, if present, form a pseudoknot. The
-positive coefficient on this quadratic term discourages the forming of
-pseudoknots without explicitly disallowing them.
+- $x_{ij}\in\{0,1\}$: 1 if bases at positions $i<j$ are paired; 0 otherwise.
+- Candidates only for pairs with **allowed chemistry** (WC + GU + optional non-canonicals) and **loop length** $⁡j-i-1\ge L_{\min}$ (this is a **pre-filter**, not a constraint).
 
-<p align = "center">
+## Objective (minimize)
 
-![Figure 2](readme_imgs/pseudoknot2.png "Simple pseudoknot example")
-<p>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
-Fig.2 - A pseudoknot formed by a stem of length 3 and a stem of length 5.
-</p>
+Sum of energetic terms (kcal/mol):
 
-This demo is loosely based on the work in [1],
-which is in turn inspired by [2].
+- **Nearest-neighbor stacking (bonus, negative):**
+    
+    $\displaystyle \sum_{(i,j)}\sum_{\text{inner }(i+1,j-1)} \Delta G^{\circ}_{37}\!\big((b_i,b_{i+1});(b_j,b_{j-1})\big)\; x_{ij}x_{i+1,j-1}$
+    
+- **Isolated-pair penalty (linear, positive):** $\displaystyle \sum_{(i,j)} h_0\, x_{ij}$
+- **Hairpin end penalty (applied only at helix ends):**
+    
+    $\displaystyle \sum_{(i,j)} H(L_{ij})\,x_{ij}\;-\;H(L_{ij})\,x_{ij}x_{i+1,j-1}$
+    
+- **AU/GU helix-end penalties (per end):**
+    
+    $\displaystyle \sum_{(i,j)} \text{pen}_{\text{end}}(b_i,b_j)\,x_{ij}\;-\;\text{pen}_{\text{end}}(b_i,b_j)\big[x_{ij}x_{i+1,j-1}+x_{ij}x_{i-1,j+1}\big]$
+    
+- **Non-canonical pair penalty (linear, positive):** $\displaystyle \sum_{(i,j)\in \text{noncanon}} \lambda_{\text{nc}}\,x_{ij}$
+- *(Optional)* **Soft pseudoknot penalty:**
+    
+    $\displaystyle \sum_{\text{crossings }(i<k<j<l)} \kappa_{\text{soft}}\, x_{ij}x_{kl}$
+    
 
-## Usage
+## Hard constraints (CQM)
 
-To run the demo through a command line interface, type:
+- **Non-overlap (at most one partner per nucleotide):**
+    
+    For every position $t$:
+    
+    $\displaystyle \sum_{(i,j):\,t\in\{i,j\}} x_{ij} \;\le\; 1$
+    
+- *(Optional)* **No pseudoknots:**
+    
+    For every crossing pair $(i<k<j<l)$:
+    
+    $\displaystyle x_{ij} + x_{kl} \;\le\; 1$
+    
 
-```bash
-python RNA_folding.py
+## Soft constraints (in the objective)
+
+- *(Optional)* **Discourage** (but allow) **pseudoknots:** add $\kappa_{\text{soft}}\,x_{ij}x_{kl}$ for each crossing instead of the hard inequality above.
+
+## Core thermodynamic model
+
+- **Nearest-neighbor (NN) energy model** for RNA helices (ΔG°₃₇ stacks are the dominant stabilizing terms used by modern predictors and databases). Primary source and curated tables: Turner/Mathews **NNDB** (1999 & 2004 RNA sets). [rna.urmc.rochester.edu](https://rna.urmc.rochester.edu/NNDB/?utm_source=chatgpt.com)[Oxford Academic](https://academic.oup.com/nar/article/38/suppl_1/D280/3112245?utm_source=chatgpt.com)
+- **Overview of NN model across loop types** (hairpins, internal, bulge, multibranch) and how energy is a sum of stack terms + loop penalties: review by Andronescu et al. (2010). [PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC2995392/?utm_source=chatgpt.com)
+- **Current updates to NNDB** and parameter coverage: Mittal et al. (2024) NNDB expansion. [PubMed](https://pubmed.ncbi.nlm.nih.gov/38522645/?utm_source=chatgpt.com)
+
+## Which base pairs are allowed
+
+- **Watson–Crick (AU/UA, GC/CG) and GU wobble** are standard in the Turner 2004 RNA parameterization (with GU-specific stack values). [rna.urmc.rochester.edu](https://rna.urmc.rochester.edu/NNDB/?utm_source=chatgpt.com)
+- **GU wobble energetics/structure** (distinct geometry, special contexts): Turner 2004 GU references index; additional structural/thermo studies of GU. [rna.urmc.rochester.edu](https://rna.urmc.rochester.edu/NNDB/turner04/wc-references.html?utm_source=chatgpt.com)[PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC2553593/?utm_source=chatgpt.com)[Oxford Academic](https://academic.oup.com/nar/article/35/11/3836/2402441?utm_source=chatgpt.com)
+- **Non-canonical/mismatches**: internal mismatches and non-WC interactions have measured thermodynamic effects; allowing them (with penalties) is consistent with Turner-era datasets (e.g., mismatches next to GC) and reviews. [rna.urmc.rochester.edu](https://rna.urmc.rochester.edu/NNDB/turner04/wc-references.html?utm_source=chatgpt.com)[PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC2995392/?utm_source=chatgpt.com)
+
+## Stacking (quadratic bonuses in the QUBO)
+
+- **Stacking free energies (ΔG°₃₇) for adjacent pairs** are the backbone of helix stability in the Turner 2004 set. Predictors like RNAstructure/ViennaRNA rely on these tables. [rna.urmc.rochester.edu](https://rna.urmc.rochester.edu/NNDB/?utm_source=chatgpt.com)[BioMed Central](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-129?utm_source=chatgpt.com)
+
+## Hairpin loop penalties (applied at helix ends)
+
+- **Hairpin initiation penalties depend on loop length L** and the **closing base pair**; classic experiments (Serra & Turner) quantify these trends. We encode them at helix ends via a quadratic “cancellation” trick in the QUBO. [PubMed+1](https://pubmed.ncbi.nlm.nih.gov/7690127/?utm_source=chatgpt.com)
+- **Sequence-specific bonuses** for stable tetraloops (e.g., GNRA, UNCG, CUUG) are well-documented; we left motif bonuses optional but the literature supports adding them later. [PMC+1](https://pmc.ncbi.nlm.nih.gov/articles/PMC2811670/?utm_source=chatgpt.com)[Oxford Academic](https://academic.oup.com/nar/article/27/5/1398/2902354?utm_source=chatgpt.com)
+
+## AU/GU helix-end penalties (per end)
+
+- Turner models include **end corrections** (AU/GU ends less stable than GC ends). Our QUBO captures this with per-end penalties that are canceled for interior pairs (i.e., only termini pay). See NNDB descriptions and Mathews/Turner reviews. [rna.urmc.rochester.edu](https://rna.urmc.rochester.edu/NNDB/?utm_source=chatgpt.com)[PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC4086783/?utm_source=chatgpt.com)[ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/S0959440X06000819?utm_source=chatgpt.com)
+
+## Hard constraints
+
+- **Non-overlap (each nucleotide pairs ≤1)** is a fundamental combinatorial constraint in RNA 2D models; standard in DP and optimization formulations. [ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/S0959440X06000819?utm_source=chatgpt.com)
+- **Anti-pseudoknot (optional)**: forbidding crossings yields the classic nested secondary-structure class; allowing pseudoknots makes the problem NP-complete for broad model families (hence we keep it optional with a penalty). [PubMed](https://pubmed.ncbi.nlm.nih.gov/11108471/?utm_source=chatgpt.com)
+
+# How to run
+
+1. Setup API configuration
+2. Download requirements
+```code
+pip install -r requirements.txt
 ```
+3. Go to ```RNA_folding.py```, and edit the main method. You can run sequence by sequence, or by files. 
+- When running sequence by sequence, change the ```PBD_ID```. 
+- When running multiple sequence in file, change the filename in ```process_sequence_list("filename.txt")```.
 
-The demo prints the optimal stem configuration along with other relevant data.
-It then saves a plot of the sequence and its bonds as `RNA_plot.png`.
+4. Run the code
+```python RNA_folding.py```
 
-### Optional parameters
-Several optional parameters are accepted:
 
-- `--path`: specifies the path to an input text file with RNA sequence information. 
-- `--verbose`: prints additional information about the model when set to 'True' (the default). 
-- `--min-stem`: minimum length necessary for a stem to be considered.
-- `--min-loop`: minimum number of nucleotides that must be present
-in between the two sides of a stem for that stem to be considered. 
-In the literature, this is termed a 'hairpin loop.'
-- `-c`: reduces the likelihood of pseudoknots by setting larger values of the coefficient, 
-*ck<sub>i</sub>k<sub>j</sub>*,
-applied to the quadratic pseudoknot terms.
 
-As an example, to explicitly call the default values, type:
-```bash
-python RNA_folding.py --path RNA_text_files/TMGMV_UPD-PK1.txt --verbose True  --min-stem 3 --min-loop 2 -c 0.3 
-```
+### Bibliography
 
-## Problem Formulation
-
-In predicting the stems of an RNA molecule, we build a quadratic model with three contributing factors. 
-
-1. Each potential stem is encoded as a binary variable, 
-linearly weighted by the negative square of the length, *k*.
-
-2. Each potential pseudoknot is encoded as a quadratic term, 
- weighted by to the product of the two lengths 
-times a positive parameter *c*.
-
-3. Overlapping stems are not allowed. 
-Potential overlaps give rise to constraints in the model.
-
-![objective](readme_imgs/model.png "The optimization model")
-
-Here, each *x<sub>i</sub>* is a binary variable indicating the
-inclusion/exclusion of the *i<sup>th</sup>* stem. Each constant *k<sub>i</sub>*
-is the length of said stem. The indexing set *S* is the set of all pairs of
-stems that form a pseudoknot. Finally, *c* is a tunable parameter adjusting the
-impact of pseudoknots. It is set to 0.3 by default. If *c* = 0, the affect of
-pseudoknots is ignored, while *c* > 1 eliminates all pseudoknots from optimal
-solutions. This formulation (and default choice of *c*) is loosely based on [1].
-
-In the printed solution, each stem is denoted by four numbers. The first two
-numbers correspond to the beginning and ending indices of the first side of the
-stem. Similarly, the last two numbers correspond to the beginning and ending
-indices of the second side of the stem.
-
-## Code Overview
-
-The implementation can be broken into three main parts
-1. Preprocessing the RNA sequence to extract all possible stems, pseudoknots, and overlaps.
-2. Building the model and sending it to a hybrid solver to find a solution.
-3. Post-processing the solution 
-to print appropriate information and create the plot.
-
-A majority of the code is dedicated to step 1. Here, possible bonds are stored
-in a binary matrix, and the matrix is searched for possible stems. Possible
-stems (each corresponding to a decision variable) are stored in a dictionary
-structure that reduces the number of comparisons necessary when searching for
-pseudoknots and overlaps.
-
-## Code Specifics
-
-By default, the minimum stem length is set to 3. A stem of length 5 thus
-contains two stems of length 4 and three stems of length 3 under inclusion. The
-stem dictionary records the maximal stems (under inclusion) as keys, where each
-key maps to a list of the associated stems weakly contained within the maximal
-stem.
-
-No two stems contained in the same maximal key can both be in an optimal
-solution, so we treat them all as overlapping, regardless of if it is literally
-the case. This particular case of overlapping is enforced by treating the set of
-stems contained in a maximal stem as a single discrete variable by use of the
-`add_discrete` method.
-
-We further use the stem dictionary structure to avoid comparing all combinations
-of stems when searching for pseudoknots and overlaps.
-
-Plotting uses a randomized process to find a reasonable layout. For this reason,
-the plot will change in successive runs, even if the solution does not. 
-
-Input text files should have a number at the beginning of each line, followed by
-a sequence of A, C, G, U, and T's. The file reader ignores the leading number
-and is not sensitive to spaces, upper vs. lower case, or line breaks. By
-convention, spaces are used to separate every 10 letters and the number at the
-beginning of each line is included to keep track of the location in the
-sequence. For instance, if there are 30 letters on each line, then there would
-be three groups of 10 letters on each line, with the leading numbers increasing
-by 30 each line.
-
-## References
-
-[1] Fox DM, MacDermaid CM, Schreij AM, Zwierzyna M, Walker RC. 
-"RNA folding using quantum computers," 
-[PLOS Computational Biology](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1010032).
-
-[2] Kai, Zhang, et al. 
-"An efficient simulated annealing algorithm for the RNA secondary structure prediction with Pseudoknots," 
-[BMC Genomics](https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-019-6300-2).
+- **Mathews, Sabina, Zuker & Turner (1999)** — *Expanded sequence dependence of thermodynamic parameters improves prediction of RNA secondary structure.* **J. Mol. Biol.** 288:911–940.
+    
+    Foundational NN free-energy set for RNA (ΔG°₃₇), expanding sequence dependence and improving folding predictions. [PubMed](https://pubmed.ncbi.nlm.nih.gov/10329189/?utm_source=chatgpt.com)
+    
+- **Turner & Mathews (2010)** — *NNDB: the nearest neighbor parameter database for predicting stability of nucleic acid secondary structure.* **Nucleic Acids Research** 38:D280–D282.
+    
+    Official database paper documenting the 1999 & 2004 RNA NN parameter sets and usage. (Also see the live NNDB site.) [PubMed](https://pubmed.ncbi.nlm.nih.gov/19880381/?utm_source=chatgpt.com)[Mathews Lab](https://rna.urmc.rochester.edu/NNDB/?utm_source=chatgpt.com)
+    
+- **Turner (NNDB 2004 collection)** — *Turner 2004 RNA folding parameters (web compendium: helices, GU pairs, dangling ends, hairpins, internal/bulge/multibranch loops, coaxial stacking).*
+    
+    Curated parameter pages that aggregate the 2004 RNA NN rules used widely in practice. [Mathews Lab](https://rna.urmc.rochester.edu/NNDB/turner04/index.html?utm_source=chatgpt.com)
+    
+- **Serra & Turner (1993)** — *RNA hairpin loop stability depends on closing base pair.* **Nucleic Acids Research** 21:3845–3849.
+    
+    Classic experiments establishing loop (hairpin) penalties and dependence on the closing pair—motivates our hairpin end penalty. [Oxford Academic](https://academic.oup.com/nar/article/21/16/3845/2386373?utm_source=chatgpt.com)[PubMed](https://pubmed.ncbi.nlm.nih.gov/7690127/?utm_source=chatgpt.com)
+    
+- **Lu, Turner & Mathews (2006)** — *A set of nearest neighbor parameters for predicting the enthalpy change of RNA secondary structure formation.* **Nucleic Acids Research** 34:4912–4924.
+    
+    Complements free-energy tables with ΔH°; useful for temperature scaling beyond 37 °C. [Oxford Academic](https://academic.oup.com/nar/article/34/17/4912/3111941?utm_source=chatgpt.com)
+    
+- **Spasic, Warner, Jonikas & Mathews (2018)** — *Improving RNA nearest neighbor parameters for helices by leveraging Inosine substitutions.* **Nucleic Acids Research** 46:4883–4892.
+    
+    Representative of modern refinements to NN helix parameters; shows the lineage of updates to Turner-style models. [Oxford Academic](https://academic.oup.com/nar/article/46/10/4883/4990632?utm_source=chatgpt.com)
