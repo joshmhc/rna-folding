@@ -1,5 +1,0 @@
-> 1QZA | chain: A | length: 75
-sequence: GCGGAUUUAGCUCAGUUGGGAGAGCGCCAGACUGAAGAUCUGGAGGUCCUGUGUUCGAUCCACAGAAUUCGCACC
-dbn:      ...........................................................................
-pairs_count: 0
-paired_indices: (none)

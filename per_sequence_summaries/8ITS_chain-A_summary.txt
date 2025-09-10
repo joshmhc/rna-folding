@@ -1,5 +1,0 @@
-> 8ITS | chain: A | length: 46
-sequence: GGGAGUUAGACUCGCGAAAGCGAGGAACUGCGAAAGCAGUACUUCC
-dbn:      (((((...((((((((..))))))))((((((..)))))).)))))
-pairs_count: 19
-paired_indices: (1,46) (2,45) (3,44) (4,43) (5,42) (9,26) (10,25) (11,24) (12,23) (13,22) (14,21) (15,20) (16,19) (27,40) (28,39) (29,38) (30,37) (31,36) (32,35)

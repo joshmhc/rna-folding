@@ -1,5 +1,0 @@
-> 5A17 | chain: A | length: 32
-sequence: GACGAUAUCGAGCAUCAAGAGUGAAUAUCGUC
-dbn:      (((((((((((((.....))))).))))))))
-pairs_count: 13
-paired_indices: (1,32) (2,31) (3,30) (4,29) (5,28) (6,27) (7,26) (8,25) (9,23) (10,22) (11,21) (12,20) (13,19)

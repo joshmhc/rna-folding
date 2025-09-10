@@ -1,5 +1,0 @@
-> 8Q4O | chain: A | length: 23
-sequence: CGGUAGCGGGUAUGGGUCCGGGU
-dbn:      ....((...(.....).....))
-pairs_count: 3
-paired_indices: (5,23) (6,22) (10,16)

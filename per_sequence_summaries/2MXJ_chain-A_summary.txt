@@ -1,5 +1,0 @@
-> 2MXJ | chain: A | length: 11
-sequence: CCAGAAACGGA
-dbn:      ((((..)))).
-pairs_count: 4
-paired_indices: (1,10) (2,9) (3,8) (4,7)

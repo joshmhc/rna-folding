@@ -1,5 +1,0 @@
-> 2A43 | chain: A | length: 26
-sequence: GCGGCACCGUCCGCUCAAACAAACGG
-dbn:      ((((..(((.)))).........)))
-pairs_count: 7
-paired_indices: (1,14) (2,13) (3,12) (4,11) (7,26) (8,25) (9,24)

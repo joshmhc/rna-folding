@@ -1,5 +1,0 @@
-> 6JQ6 | chain: A | length: 81
-sequence: UUACUGUGAGAAUCAGUAACAAACAUGUGGGGCUUAUAUCUAAUCUUCGGAUUAGUAUUAGUGCAGACGUUAAAACCAUGU
-dbn:      ((((((((..)..))))))((......).)((((.((()((((((....))))))))).)))().)..(..).........
-pairs_count: 25
-paired_indices: (1,19) (2,18) (3,17) (4,16) (5,15) (6,14) (7,11) (8,39) (20,30) (21,28) (31,64) (32,62) (33,61) (34,60) (36,58) (37,57) (38,56) (40,55) (41,54) (42,53) (43,52) (44,51) (45,50) (63,66) (69,72)

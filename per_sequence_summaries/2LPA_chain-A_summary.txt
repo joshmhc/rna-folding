@@ -1,5 +1,0 @@
-> 2LPA | chain: A | length: 15
-sequence: GAGGACAUAGUCUUC
-dbn:      (((((((.)))))))
-pairs_count: 7
-paired_indices: (1,15) (2,14) (3,13) (4,12) (5,11) (6,10) (7,9)

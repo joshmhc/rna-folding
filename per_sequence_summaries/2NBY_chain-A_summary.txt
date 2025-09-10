@@ -1,5 +1,0 @@
-> 2NBY | chain: A | length: 39
-sequence: GGGCAGAAGGUACCCCAUUGUAUGGGAUCUGAUCUGCCC
-dbn:      ((((((((((.(((((((...)))))))))).)))))))
-pairs_count: 17
-paired_indices: (1,39) (2,38) (3,37) (4,36) (5,35) (6,34) (7,33) (8,31) (9,30) (10,29) (12,28) (13,27) (14,26) (15,25) (16,24) (17,23) (18,22)

@@ -1,5 +1,0 @@
-> 1JP0 | chain: A | length: 21
-sequence: GGCGGUGCUGAGAUGCCCGUC
-dbn:      (((((.((......)))))))
-pairs_count: 7
-paired_indices: (1,21) (2,20) (3,19) (4,18) (5,17) (7,16) (8,15)

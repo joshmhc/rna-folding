@@ -1,5 +1,0 @@
-> 5Z1I | chain: A | length: 21
-sequence: GCGUCGCGCCGGCGAAGUCGC
-dbn:      (((((.(((())))..)))))
-pairs_count: 9
-paired_indices: (1,21) (2,20) (3,19) (4,18) (5,17) (7,14) (8,13) (9,12) (10,11)

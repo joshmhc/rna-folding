@@ -1,5 +1,0 @@
-> 8TNS | chain: A | length: 24
-sequence: GUGUGUGUGUGUGUGUGUGUGUGU
-dbn:      ...(.....((....))....)..
-pairs_count: 3
-paired_indices: (4,22) (10,16) (11,17)

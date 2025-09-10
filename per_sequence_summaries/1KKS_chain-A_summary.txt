@@ -1,5 +1,0 @@
-> 1KKS | chain: A | length: 24
-sequence: GGAAGGCCCUUUUCAGGGCCACCC
-dbn:      .(.(((((((....))))))).).
-pairs_count: 8
-paired_indices: (2,23) (4,21) (5,20) (6,19) (7,18) (8,17) (9,16) (10,15)

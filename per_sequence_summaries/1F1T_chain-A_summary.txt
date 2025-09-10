@@ -1,5 +1,0 @@
-> 1F1T | chain: A | length: 38
-sequence: GGANCCCGACNGGCGAGAGCCAGGNAACGAANGGANCC
-dbn:      ((((((((.((((((..))))))....))...))))))
-pairs_count: 14
-paired_indices: (1,38) (2,37) (3,36) (4,35) (5,34) (6,33) (7,29) (8,28) (10,23) (11,22) (12,21) (13,20) (14,19) (15,18)

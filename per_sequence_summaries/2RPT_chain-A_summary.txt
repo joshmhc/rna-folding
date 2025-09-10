@@ -1,5 +1,0 @@
-> 2RPT | chain: A | length: 20
-sequence: GGCCCGCCGAAAGGCCGGCC
-dbn:      ((((.(((....))).))))
-pairs_count: 7
-paired_indices: (1,20) (2,19) (3,18) (4,17) (6,15) (7,14) (8,13)

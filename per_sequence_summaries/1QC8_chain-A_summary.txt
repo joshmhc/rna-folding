@@ -1,5 +1,0 @@
-> 1QC8 | chain: A | length: 25
-sequence: GGCAGUGUGAGUACCUUCACACGUC
-dbn:      ..(.(((((((....))))))))..
-pairs_count: 8
-paired_indices: (3,23) (5,22) (6,21) (7,20) (8,19) (9,18) (10,17) (11,16)

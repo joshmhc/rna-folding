@@ -1,5 +1,0 @@
-> 4LX5 | chain: A | length: 71
-sequence: GGCUUCAUAUAAUCCGAAUGAUAUGGUUUCGGAGCUUCCACCAAGAGCCUUAAACUCUUGAUUAUGAAGUC
-dbn:      .......................................................................
-pairs_count: 0
-paired_indices: (none)

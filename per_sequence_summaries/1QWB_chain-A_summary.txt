@@ -1,5 +1,0 @@
-> 1QWB | chain: A | length: 26
-sequence: GGACACGAAAUCCCGAAGUAGUGUCC
-dbn:      ((((((((((.....)).))))))))
-pairs_count: 10
-paired_indices: (1,26) (2,25) (3,24) (4,23) (5,22) (6,21) (7,20) (8,19) (9,17) (10,16)

@@ -1,5 +1,0 @@
-> 7Q6L | chain: A | length: 22
-sequence: GGGCCAUAGGGUGGGAUCUGGG
-dbn:      ......................
-pairs_count: 0
-paired_indices: (none)

@@ -1,5 +1,0 @@
-> 6K84 | chain: A | length: 25
-sequence: GGAGGAGGAGGAAGGAGGAGGAGGA
-dbn:      ...(..)......((.(..)..)).
-pairs_count: 4
-paired_indices: (4,7) (14,23) (15,24) (17,20)

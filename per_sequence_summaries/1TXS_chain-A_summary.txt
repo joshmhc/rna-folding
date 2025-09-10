@@ -1,5 +1,0 @@
-> 1TXS | chain: A | length: 38
-sequence: GGGCUAGCACUCUGGUAUUACGGUACCUUUGUGCGCCC
-dbn:      ((((..(((((((((((((..)))))))))))))))))
-pairs_count: 17
-paired_indices: (1,38) (2,37) (3,36) (4,35) (7,34) (8,33) (9,32) (10,31) (11,30) (12,29) (13,28) (14,27) (15,26) (16,25) (17,24) (18,23) (19,22)

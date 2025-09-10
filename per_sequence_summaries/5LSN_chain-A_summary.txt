@@ -1,5 +1,0 @@
-> 5LSN | chain: A | length: 29
-sequence: CCUCGUGGUGGUUGUGAACCACCAUGUGG
-dbn:      ((((((((((((((.))))))))))))))
-pairs_count: 14
-paired_indices: (1,29) (2,28) (3,27) (4,26) (5,25) (6,24) (7,23) (8,22) (9,21) (10,20) (11,19) (12,18) (13,17) (14,16)

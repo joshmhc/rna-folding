@@ -1,5 +1,0 @@
-> 2AU4 | chain: A | length: 41
-sequence: GGGACGAAGUGGUUGGGCGCUUCGGCGUGUGAAAACGUCCC
-dbn:      (((((((.(..(.((.(((((..))))))..))))))))))
-pairs_count: 16
-paired_indices: (1,41) (2,40) (3,39) (4,38) (5,37) (6,36) (7,35) (9,29) (12,34) (14,33) (15,32) (17,28) (18,27) (19,26) (20,25) (21,24)

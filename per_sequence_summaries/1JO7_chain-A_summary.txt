@@ -1,5 +1,0 @@
-> 1JO7 | chain: A | length: 31
-sequence: AGUAGAAACAAGGCUUCGGCCUGCUUUUGCU
-dbn:      (((((((.(..((((..)))).).)))))))
-pairs_count: 12
-paired_indices: (1,31) (2,30) (3,29) (4,28) (5,27) (6,26) (7,25) (9,23) (12,21) (13,20) (14,19) (15,18)

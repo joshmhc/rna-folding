@@ -1,5 +1,0 @@
-> 2KGP | chain: A | length: 25
-sequence: GGCAGUGUGAGUACCUUCACACGUC
-dbn:      (((.((((((......)))))))))
-pairs_count: 9
-paired_indices: (1,25) (2,24) (3,23) (5,22) (6,21) (7,20) (8,19) (9,18) (10,17)

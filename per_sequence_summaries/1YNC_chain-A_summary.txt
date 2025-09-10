@@ -1,5 +1,0 @@
-> 1YNC | chain: A | length: 31
-sequence: GGAUAUAUGAUACAAUUUGAUCAGUAUAUCC
-dbn:      ((((((((((((......)))))).))))))
-pairs_count: 12
-paired_indices: (1,31) (2,30) (3,29) (4,28) (5,27) (6,26) (7,24) (8,23) (9,22) (10,21) (11,20) (12,19)

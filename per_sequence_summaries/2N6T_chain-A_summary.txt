@@ -1,5 +1,0 @@
-> 2N6T | chain: A | length: 42
-sequence: GGGUAGAGUAUAAUUAGUCUUCGGACUUCCUUAUACUUAUCC
-dbn:      .(((...(((((..((((((..))))))...)))))..))).
-pairs_count: 14
-paired_indices: (2,41) (3,40) (4,39) (8,36) (9,35) (10,34) (11,33) (12,32) (15,28) (16,27) (17,26) (18,25) (19,24) (20,23)

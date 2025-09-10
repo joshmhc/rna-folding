@@ -1,5 +1,0 @@
-> 2N0R | chain: A | length: 26
-sequence: GCUGAGCUCGAAAGAGCAAUGAUGUC
-dbn:      .((((((((....))))...))))..
-pairs_count: 8
-paired_indices: (2,24) (3,23) (4,22) (5,21) (6,17) (7,16) (8,15) (9,14)

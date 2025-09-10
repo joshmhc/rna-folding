@@ -1,5 +1,0 @@
-> 7UGA | chain: A | length: 43
-sequence: GGGUGUAGAAAAGUAAGGGAAACUCAAACCCCUUUCUACACCC
-dbn:      ((((((((((.....((((((......))))))))))))))))
-pairs_count: 16
-paired_indices: (1,43) (2,42) (3,41) (4,40) (5,39) (6,38) (7,37) (8,36) (9,35) (10,34) (16,33) (17,32) (18,31) (19,30) (20,29) (21,28)

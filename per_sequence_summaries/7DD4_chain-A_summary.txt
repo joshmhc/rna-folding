@@ -1,5 +1,0 @@
-> 7DD4 | chain: A | length: 36
-sequence: GGUCUCUCUUCGGGGAACCCACUGCGAAAGUAGUGU
-dbn:      (((.(((((..))))))))(((((((..))))))).
-pairs_count: 15
-paired_indices: (1,19) (2,18) (3,17) (5,16) (6,15) (7,14) (8,13) (9,12) (20,35) (21,34) (22,33) (23,32) (24,31) (25,30) (26,29)

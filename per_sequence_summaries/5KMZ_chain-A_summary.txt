@@ -1,5 +1,0 @@
-> 5KMZ | chain: A | length: 31
-sequence: AACCUUCACCAAUUAGGUUCAAAUAAGUGGU
-dbn:      ((((..(((((.((())))....))))))))
-pairs_count: 12
-paired_indices: (1,19) (2,18) (3,17) (4,16) (7,27) (8,31) (9,30) (10,29) (11,28) (13,26) (14,25) (15,24)

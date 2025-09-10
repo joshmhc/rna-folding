@@ -1,5 +1,0 @@
-> 387D | chain: A | length: 26
-sequence: UCCGAAGUGCAACGGGAAAAUGCACU
-dbn:      (((((......))))..)........
-pairs_count: 5
-paired_indices: (1,18) (2,15) (3,14) (4,13) (5,12)

@@ -1,5 +1,0 @@
-> 1B36 | chain: A | length: 38
-sequence: GGUGCAGAAACAGCGCUUCGGCGCGUAUAUUACGCACC
-dbn:      (((((((.(((((((((..)))))))).)..)))))))
-pairs_count: 16
-paired_indices: (1,38) (2,37) (3,36) (4,35) (5,34) (6,33) (7,32) (9,29) (10,27) (11,26) (12,25) (13,24) (14,23) (15,22) (16,21) (17,20)

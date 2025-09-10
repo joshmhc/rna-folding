@@ -1,5 +1,0 @@
-> 1ZC5 | chain: A | length: 41
-sequence: GGCGAUCUGGCCUUCCUACAAGGGAAGGCCAGGGAAUUGCC
-dbn:      ((((((((((((((((((..))))))))))))...))))))
-pairs_count: 18
-paired_indices: (1,41) (2,40) (3,39) (4,38) (5,37) (6,36) (7,32) (8,31) (9,30) (10,29) (11,28) (12,27) (13,26) (14,25) (15,24) (16,23) (17,22) (18,21)

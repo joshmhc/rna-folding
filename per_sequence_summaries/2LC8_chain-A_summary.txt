@@ -1,5 +1,0 @@
-> 2LC8 | chain: A | length: 63
-sequence: GGAGGUCAGGGUCAGGAGCCCCCCCCUGAACCCAGGAUAACCCUCAAAGUCGGGGGGCAACCC
-dbn:      ....((((((((((((.((((((()))).))))).))).............))))))).....
-pairs_count: 19
-paired_indices: (5,38) (6,37) (7,36) (8,34) (9,33) (10,32) (11,31) (12,30) (13,28) (14,27) (15,26) (16,25) (18,58) (19,57) (20,56) (21,55) (22,54) (23,53) (24,52)

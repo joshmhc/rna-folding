@@ -1,5 +1,0 @@
-> 4C40 | chain: A | length: 19
-sequence: GGCGAAGAACCGGGGAGCC
-dbn:      (((...((((())))))))
-pairs_count: 8
-paired_indices: (1,19) (2,18) (3,17) (7,16) (8,15) (9,14) (10,13) (11,12)

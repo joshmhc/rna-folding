@@ -1,5 +1,0 @@
-> 8U3M | chain: A | length: 31
-sequence: GGCAGAUCUGAGCCUUCGGGAGCUCUCUGCC
-dbn:      ((((((.((((((((..))))))))))))))
-pairs_count: 14
-paired_indices: (1,31) (2,30) (3,29) (4,28) (5,27) (6,26) (8,25) (9,24) (10,23) (11,22) (12,21) (13,20) (14,19) (15,18)

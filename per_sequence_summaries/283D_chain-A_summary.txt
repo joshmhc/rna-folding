@@ -1,5 +1,0 @@
-> 283D | chain: A | length: 12
-sequence: GGCCGAAAGGCC
-dbn:      (((((())))))
-pairs_count: 6
-paired_indices: (1,12) (2,11) (3,10) (4,9) (5,8) (6,7)

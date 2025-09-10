@@ -1,5 +1,0 @@
-> 2M22 | chain: A | length: 23
-sequence: GGCAGAUCUGUAAUAGAACUGCC
-dbn:      (((((.(((.....))).)))))
-pairs_count: 8
-paired_indices: (1,23) (2,22) (3,21) (4,20) (5,19) (7,17) (8,16) (9,15)

@@ -1,5 +1,0 @@
-> 1RNG | chain: A | length: 12
-sequence: GGCGCUUGCGUC
-dbn:      (((((..)))))
-pairs_count: 5
-paired_indices: (1,12) (2,11) (3,10) (4,9) (5,8)

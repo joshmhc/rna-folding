@@ -1,5 +1,0 @@
-> 7D7X | chain: A | length: 51
-sequence: GCUUCAACAACCCCGUAGGUGGGGACGAAAGUCAGCGCACCUACUGGAGCC
-dbn:      ((((((.....((.(((((((((((((..))))))))))))))))))))).
-pairs_count: 21
-paired_indices: (1,50) (2,49) (3,48) (4,47) (5,46) (6,45) (12,37) (13,35) (15,44) (16,43) (17,42) (18,41) (19,40) (20,39) (21,38) (22,36) (23,34) (24,33) (25,32) (26,31) (27,30)

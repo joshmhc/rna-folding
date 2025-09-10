@@ -1,5 +1,0 @@
-> 2Z9Q | chain: A | length: 75
-sequence: CGGAUUUAGCUCAGUUGGGAGAGCGCCAGACUGAANAUCUGGAGGUCCUGUGUUCGAUCCACAGAAUUCGCACCA
-dbn:      ...........................................................................
-pairs_count: 0
-paired_indices: (none)

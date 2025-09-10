@@ -1,5 +1,0 @@
-> 2N7X | chain: A | length: 23
-sequence: GGUAGUUUUGGCAUGACUCUACC
-dbn:      (((((((((.....)))))))))
-pairs_count: 9
-paired_indices: (1,23) (2,22) (3,21) (4,20) (5,19) (6,18) (7,17) (8,16) (9,15)

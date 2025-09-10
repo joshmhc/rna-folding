@@ -1,5 +1,0 @@
-> 9BCI | chain: A | length: 50
-sequence: GGAUCUUCUGCUCUGCACAACCUUCGGGUGGUGCGAGAACACAGGAUACC
-dbn:      (((((((.(((((((((((((((..))))))))).)))))).))))).))
-pairs_count: 22
-paired_indices: (1,50) (2,49) (3,47) (4,46) (5,45) (6,44) (7,43) (9,41) (10,40) (11,39) (12,38) (13,37) (14,36) (15,34) (16,33) (17,32) (18,31) (19,30) (20,29) (21,28) (22,27) (23,26)

@@ -1,5 +1,0 @@
-> 2JWV | chain: A | length: 29
-sequence: GAUACUUGAAACUGUAAGGUUGGCGUAUC
-dbn:      .((((.(.((((((..)))))).))))).
-pairs_count: 11
-paired_indices: (2,28) (3,27) (4,26) (5,25) (7,24) (9,22) (10,21) (11,20) (12,19) (13,18) (14,17)

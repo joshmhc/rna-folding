@@ -1,5 +1,0 @@
-> 1SZY | chain: A | length: 21
-sequence: GGCAGGGCUCAUAACCCUGCC
-dbn:      ((((((((....).)))))))
-pairs_count: 8
-paired_indices: (1,21) (2,20) (3,19) (4,18) (5,17) (6,16) (7,15) (8,13)

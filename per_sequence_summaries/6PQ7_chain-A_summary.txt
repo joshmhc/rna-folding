@@ -1,5 +1,0 @@
-> 6PQ7 | chain: A | length: 37
-sequence: GUACGAAGGAAGGUUUGGUAUGGGGUAGUUGUCGUAC
-dbn:      (((((((.(.((((..)).())..(.)).))))))))
-pairs_count: 14
-paired_indices: (1,37) (2,36) (3,35) (4,34) (5,33) (6,32) (7,31) (9,22) (11,30) (12,17) (13,18) (14,21) (20,27) (25,28)

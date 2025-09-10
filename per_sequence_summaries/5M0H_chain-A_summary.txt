@@ -1,5 +1,0 @@
-> 5M0H | chain: A | length: 42
-sequence: GAUAACUGAAUCGCUAAGGAUGAAAGUCUAUGCGACAUUAUC
-dbn:      (((((.((..(((((..(((((..)))))).)))))))))))
-pairs_count: 17
-paired_indices: (1,42) (2,41) (3,40) (4,39) (5,38) (7,37) (8,36) (11,35) (12,34) (13,33) (14,32) (15,30) (18,29) (19,28) (20,27) (21,26) (22,25)

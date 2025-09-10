@@ -1,5 +1,0 @@
-> 1AM0 | chain: A | length: 40
-sequence: GGGUUGGGAAGAAACUGUGGCACUUCGGUGCCAGCAACCC
-dbn:      .....((...).....((..............))).....
-pairs_count: 4
-paired_indices: (6,35) (7,11) (17,34) (18,33)

@@ -1,5 +1,0 @@
-> 1MFY | chain: A | length: 31
-sequence: AGUAGAAACAAGGCUUCGGCCUGCUUUCGCU
-dbn:      ..(.(((...(((((..)))))...))))..
-pairs_count: 9
-paired_indices: (3,29) (5,28) (6,27) (7,26) (11,22) (12,21) (13,20) (14,19) (15,18)

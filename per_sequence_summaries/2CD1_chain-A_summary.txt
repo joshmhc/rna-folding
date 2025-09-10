@@ -1,5 +1,0 @@
-> 2CD1 | chain: A | length: 27
-sequence: GGAAGUCCGGUCUUCGGACCGGCUUCC
-dbn:      .((((.(((((((..))))))))))).
-pairs_count: 11
-paired_indices: (2,26) (3,25) (4,24) (5,23) (7,22) (8,21) (9,20) (10,19) (11,18) (12,17) (13,16)

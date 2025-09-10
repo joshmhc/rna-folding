@@ -1,5 +1,0 @@
-> 6W3M | chain: A | length: 41
-sequence: GGUUUGUUUGAAUAGAGAGCAGAUCUCUGGAAAAAUGAACC
-dbn:      (((((((((.(.((((((.....))))))..))))))))))
-pairs_count: 16
-paired_indices: (1,41) (2,40) (3,39) (4,38) (5,37) (6,36) (7,35) (8,34) (9,33) (11,32) (13,29) (14,28) (15,27) (16,26) (17,25) (18,24)

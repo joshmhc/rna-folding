@@ -1,5 +1,0 @@
-> 8XZK | chain: A | length: 53
-sequence: GGGUGUGUACCGUUCAACUCGUCCCAGCUUCGACUGGGACUACGGGAGCGCCU
-dbn:      (((((((.((((((..)...((((((((...).))))))).))))))))))))
-pairs_count: 21
-paired_indices: (1,53) (2,52) (3,51) (4,50) (5,49) (6,48) (7,47) (9,46) (10,45) (11,44) (12,43) (13,42) (14,17) (21,40) (22,39) (23,38) (24,37) (25,36) (26,35) (27,34) (28,32)

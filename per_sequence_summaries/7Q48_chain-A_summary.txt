@@ -1,5 +1,0 @@
-> 7Q48 | chain: A | length: 22
-sequence: GGGCCAUUGGGUGGGAUCUGGG
-dbn:      ......................
-pairs_count: 0
-paired_indices: (none)

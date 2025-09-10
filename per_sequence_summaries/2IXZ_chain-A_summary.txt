@@ -1,5 +1,0 @@
-> 2IXZ | chain: A | length: 8
-sequence: GCUGUGCC
-dbn:      ((...).)
-pairs_count: 2
-paired_indices: (1,8) (2,6)

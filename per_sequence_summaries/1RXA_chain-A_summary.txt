@@ -1,5 +1,0 @@
-> 1RXA | chain: A | length: 8
-sequence: CCCCGGGG
-dbn:      (((())))
-pairs_count: 4
-paired_indices: (1,8) (2,7) (3,6) (4,5)

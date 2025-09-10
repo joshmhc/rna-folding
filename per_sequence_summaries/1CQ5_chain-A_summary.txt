@@ -1,5 +1,0 @@
-> 1CQ5 | chain: A | length: 43
-sequence: GGCGUUUACCAGGUCAGGUCCGGAAGGAAGCAGCCAAGGCGCC
-dbn:      ((((((....(((((..(((((..))))).).)))).))))))
-pairs_count: 16
-paired_indices: (1,43) (2,42) (3,41) (4,40) (5,39) (6,38) (11,36) (12,35) (13,34) (14,33) (15,31) (18,29) (19,28) (20,27) (21,26) (22,25)

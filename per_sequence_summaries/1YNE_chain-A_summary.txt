@@ -1,5 +1,0 @@
-> 1YNE | chain: A | length: 31
-sequence: GGAUAUAUGAUAUAAUUUGAUCAGUAUAUCC
-dbn:      ((((((.((((........))))..))))))
-pairs_count: 10
-paired_indices: (1,31) (2,30) (3,29) (4,28) (5,27) (6,26) (8,23) (9,22) (10,21) (11,20)

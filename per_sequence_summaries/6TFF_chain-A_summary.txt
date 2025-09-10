@@ -1,5 +1,0 @@
-> 6TFF | chain: A | length: 52
-sequence: GGCUUCAACAACCCCGUAGGUUGGGCCGAAAGGCAGCGAAUCUACUGGAGCC
-dbn:      (((((((.....((.(((((((((((((..))))))))))))))))))))))
-pairs_count: 22
-paired_indices: (1,52) (2,51) (3,50) (4,49) (5,48) (6,47) (7,46) (13,38) (14,36) (16,45) (17,44) (18,43) (19,42) (20,41) (21,40) (22,39) (23,37) (24,35) (25,34) (26,33) (27,32) (28,31)

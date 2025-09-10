@@ -1,5 +1,0 @@
-> 2KX8 | chain: A | length: 42
-sequence: GGGAAAUGAGGCGCUGCAUGUGGCAGUCUGCCUUUCUUUCCC
-dbn:      ..........................................
-pairs_count: 0
-paired_indices: (none)

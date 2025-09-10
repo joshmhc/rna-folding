@@ -1,5 +1,0 @@
-> 2KZL | chain: A | length: 55
-sequence: GGGAGUAAAGAUUGAGACAAGUAGGACUUCGGUCCGAAUACACUCAUGAACUCCC
-dbn:      ((((((.(..(((((((..(.((((((....)))))))...))))))))))))))
-pairs_count: 21
-paired_indices: (1,55) (2,54) (3,53) (4,52) (5,51) (6,50) (8,49) (11,48) (12,47) (13,46) (14,45) (15,44) (16,43) (17,42) (20,38) (22,37) (23,36) (24,35) (25,34) (26,33) (27,32)

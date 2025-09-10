@@ -1,5 +1,0 @@
-> 1F84 | chain: A | length: 29
-sequence: GGCCGAGUAGUGUUGGGUCGCGAAAGGCC
-dbn:      .(((((.(((((.(..).)))))))))).
-pairs_count: 11
-paired_indices: (2,28) (3,27) (4,26) (5,25) (6,24) (8,23) (9,22) (10,21) (11,20) (12,19) (14,17)

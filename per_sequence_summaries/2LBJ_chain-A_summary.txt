@@ -1,5 +1,0 @@
-> 2LBJ | chain: A | length: 17
-sequence: GGGCCUUGCCAAGGUCC
-dbn:      ((.((((...)))).))
-pairs_count: 6
-paired_indices: (1,17) (2,16) (4,14) (5,13) (6,12) (7,11)

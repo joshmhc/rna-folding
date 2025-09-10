@@ -1,5 +1,0 @@
-> 1FL8 | chain: A | length: 17
-sequence: UCAGACUUUUNAUCUGA
-dbn:      (((((.......)))))
-pairs_count: 5
-paired_indices: (1,17) (2,16) (3,15) (4,14) (5,13)

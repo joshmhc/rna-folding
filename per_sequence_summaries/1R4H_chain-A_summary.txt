@@ -1,5 +1,0 @@
-> 1R4H | chain: A | length: 10
-sequence: GGGCAAGCCC
-dbn:      .(((..))).
-pairs_count: 3
-paired_indices: (2,9) (3,8) (4,7)

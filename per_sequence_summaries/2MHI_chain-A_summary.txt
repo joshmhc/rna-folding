@@ -1,5 +1,0 @@
-> 2MHI | chain: A | length: 53
-sequence: GGAAACGCCGCGGUCAGCUCGGCUGCUGCGAAGAGUUCGUCUCUGUUGUUUCC
-dbn:      ((((((((.((((.((((...))))))))(..((((..).))))).)))))))
-pairs_count: 21
-paired_indices: (1,53) (2,52) (3,51) (4,50) (5,49) (6,48) (7,47) (8,45) (10,29) (11,28) (12,27) (13,26) (15,25) (16,24) (17,23) (18,22) (30,44) (33,43) (34,42) (35,41) (36,39)

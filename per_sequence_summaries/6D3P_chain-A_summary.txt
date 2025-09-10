@@ -1,5 +1,0 @@
-> 6D3P | chain: A | length: 45
-sequence: GGGCGUAACCUCCAUCCGAGUUGCAAGAGAGGGAAACGCAGUCUC
-dbn:      ..(((((((((((.......(()..))))))))..))))......
-pairs_count: 13
-paired_indices: (3,39) (4,38) (5,37) (6,36) (7,23) (8,33) (9,32) (10,31) (11,30) (12,29) (13,27) (21,28) (22,26)

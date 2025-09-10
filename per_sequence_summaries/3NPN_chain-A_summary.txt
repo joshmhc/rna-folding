@@ -1,5 +1,0 @@
-> 3NPN | chain: A | length: 54
-sequence: GGACGAGGAGCGUUGCAAGCGAAAGCCCAGGCUAGUCCGUUCAAACGGCGCUCA
-dbn:      ...(((((((((((.((((((..))))))()))))..........).)))))).
-pairs_count: 18
-paired_indices: (4,35) (5,34) (6,33) (7,32) (8,53) (9,52) (10,51) (11,50) (12,49) (13,48) (14,29) (16,31) (17,28) (18,27) (19,26) (20,25) (21,24) (30,46)

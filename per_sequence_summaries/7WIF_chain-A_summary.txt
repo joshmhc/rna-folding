@@ -1,5 +1,0 @@
-> 7WIF | chain: A | length: 50
-sequence: GGCGUGGUCCGUUCAACUCGUUCCUCGAAAGAGGAACUACGGGAGACGCC
-dbn:      ((((((((((((.......((((((((..)))))))).))))))))))))
-pairs_count: 20
-paired_indices: (1,50) (2,49) (3,48) (4,47) (5,46) (6,45) (7,44) (8,43) (9,42) (10,41) (11,40) (12,39) (20,37) (21,36) (22,35) (23,34) (24,33) (25,32) (26,31) (27,30)

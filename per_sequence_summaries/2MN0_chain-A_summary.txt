@@ -1,5 +1,0 @@
-> 2MN0 | chain: A | length: 15
-sequence: GGAGAGUGGAACUCC
-dbn:      ((((((...))))))
-pairs_count: 6
-paired_indices: (1,15) (2,14) (3,13) (4,12) (5,11) (6,10)

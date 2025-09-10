@@ -1,5 +1,0 @@
-> 1YN2 | chain: A | length: 17
-sequence: GCGAGUUGACUACUCGC
-dbn:      ((((((.....))))))
-pairs_count: 6
-paired_indices: (1,17) (2,16) (3,15) (4,14) (5,13) (6,12)

@@ -1,5 +1,0 @@
-> 2ZY6 | chain: A | length: 39
-sequence: GCCCGGAUAGUGUCCUUGGGAAACCGAGUCCGGGCACCA
-dbn:      ((((((((((.(...........)))).)))))))....
-pairs_count: 11
-paired_indices: (1,35) (2,34) (3,33) (4,32) (5,31) (6,30) (7,29) (8,27) (9,26) (10,25) (12,24)

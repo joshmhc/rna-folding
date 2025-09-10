@@ -1,5 +1,0 @@
-> 1HS8 | chain: A | length: 13
-sequence: GCGUCAAUUCGCA
-dbn:      ((((....)))).
-pairs_count: 4
-paired_indices: (1,12) (2,11) (3,10) (4,9)

@@ -1,5 +1,0 @@
-> 7QSH | chain: A | length: 27
-sequence: UNCUCCUAGUACGAGAGGACCGGAGUG
-dbn:      ..(((((..((((..)))).)))))..
-pairs_count: 9
-paired_indices: (3,25) (4,24) (5,23) (6,22) (7,21) (10,19) (11,18) (12,17) (13,16)

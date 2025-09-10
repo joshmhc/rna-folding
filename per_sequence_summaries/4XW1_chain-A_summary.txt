@@ -1,5 +1,0 @@
-> 4XW1 | chain: A | length: 9
-sequence: GCCUNCCUG
-dbn:      ((()))...
-pairs_count: 3
-paired_indices: (1,6) (2,5) (3,4)

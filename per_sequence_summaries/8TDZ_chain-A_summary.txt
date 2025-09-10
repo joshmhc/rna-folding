@@ -1,5 +1,0 @@
-> 8TDZ | chain: A | length: 16
-sequence: AGAGAAGNUCUUCUCU
-dbn:      (((((((())))))))
-pairs_count: 8
-paired_indices: (1,16) (2,15) (3,14) (4,13) (5,12) (6,11) (7,10) (8,9)

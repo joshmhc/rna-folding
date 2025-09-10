@@ -1,5 +1,0 @@
-> 7MKT | chain: A | length: 23
-sequence: GUGUGUGUGUGUGUGUGUGUGUG
-dbn:      (.(...(.(...).)((.).)))
-pairs_count: 6
-paired_indices: (1,19) (3,21) (7,13) (9,15) (16,22) (17,23)

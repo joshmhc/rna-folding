@@ -1,5 +1,0 @@
-> 6JJI | chain: A | length: 14
-sequence: GGCUCGGCGGCGGA
-dbn:      ((...)).((.)).
-pairs_count: 4
-paired_indices: (1,6) (2,7) (9,12) (10,13)

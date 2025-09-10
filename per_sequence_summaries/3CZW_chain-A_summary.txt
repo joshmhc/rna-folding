@@ -1,5 +1,0 @@
-> 3CZW | chain: A | length: 16
-sequence: GUGGUCUGAUGAGGCC
-dbn:      ..((((((()))))))
-pairs_count: 7
-paired_indices: (3,16) (4,15) (5,14) (6,13) (7,12) (8,11) (9,10)

@@ -1,5 +1,0 @@
-> 2MXL | chain: A | length: 39
-sequence: GGAUUUGCAGGCCUACCAGAAACGGAUGGGAGUGCAGAU
-dbn:      ..(((((((((((((((((..)))).)))))))))))))
-pairs_count: 17
-paired_indices: (3,39) (4,38) (5,37) (6,36) (7,35) (8,34) (9,33) (10,32) (11,31) (12,30) (13,29) (14,28) (15,27) (16,25) (17,24) (18,23) (19,22)

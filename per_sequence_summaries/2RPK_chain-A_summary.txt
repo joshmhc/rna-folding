@@ -1,5 +1,0 @@
-> 2RPK | chain: A | length: 20
-sequence: GGGAUCCAUGACAGGAUCCC
-dbn:      (((((((.(...))))))))
-pairs_count: 8
-paired_indices: (1,20) (2,19) (3,18) (4,17) (5,16) (6,15) (7,14) (9,13)

@@ -1,5 +1,0 @@
-> 1I4B | chain: A | length: 13
-sequence: GGUGCUUAGCACC
-dbn:      (((((...)))))
-pairs_count: 5
-paired_indices: (1,13) (2,12) (3,11) (4,10) (5,9)

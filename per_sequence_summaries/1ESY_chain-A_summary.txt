@@ -1,5 +1,0 @@
-> 1ESY | chain: A | length: 19
-sequence: GGCGACUGGUGAGUACGCC
-dbn:      (((((((....)).)))))
-pairs_count: 7
-paired_indices: (1,19) (2,18) (3,17) (4,16) (5,15) (6,13) (7,12)

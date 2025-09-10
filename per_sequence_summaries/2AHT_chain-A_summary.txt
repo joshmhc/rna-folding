@@ -1,5 +1,0 @@
-> 2AHT | chain: A | length: 27
-sequence: GGAGCGGGGGUGUAAACCUAUCGCUCC
-dbn:      ((((((((((((..))))).)))))))
-pairs_count: 12
-paired_indices: (1,27) (2,26) (3,25) (4,24) (5,23) (6,22) (7,21) (8,19) (9,18) (10,17) (11,16) (12,15)

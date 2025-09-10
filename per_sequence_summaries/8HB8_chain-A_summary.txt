@@ -1,5 +1,0 @@
-> 8HB8 | chain: A | length: 55
-sequence: GCGGCGUUGCGUCCGAAAGUCUAAACAGACACGGCCGCUUAAAAACAAAAGGAGA
-dbn:      (((((.((.(.((((...(((......)))).())))).......))..))))).
-pairs_count: 16
-paired_indices: (1,38) (2,37) (3,36) (4,35) (5,34) (7,47) (8,50) (10,54) (12,53) (13,52) (14,51) (15,31) (19,30) (20,29) (21,28) (33,46)

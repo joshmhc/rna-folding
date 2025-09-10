@@ -1,5 +1,0 @@
-> 8Q6N | chain: A | length: 46
-sequence: GGAGUAGAAGCGUUCAGCGGCCGAAAGGCCGCCCGGAAAUUGCUCC
-dbn:      ((((((...((.(((((((((((..)))))))).)))).)))))))
-pairs_count: 19
-paired_indices: (1,46) (2,45) (3,44) (4,43) (5,42) (6,41) (10,40) (11,35) (13,38) (14,37) (15,36) (16,33) (17,32) (18,31) (19,30) (20,29) (21,28) (22,27) (23,26)

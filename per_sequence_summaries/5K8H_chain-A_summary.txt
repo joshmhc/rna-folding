@@ -1,5 +1,0 @@
-> 5K8H | chain: A | length: 7
-sequence: AAAAAAA
-dbn:      .))....
-pairs_count: 2
-paired_indices: (2,2) (3,3)

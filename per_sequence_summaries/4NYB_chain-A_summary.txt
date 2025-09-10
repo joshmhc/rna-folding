@@ -1,5 +1,0 @@
-> 4NYB | chain: A | length: 83
-sequence: GCGACUCGGGGUGCCCUUCUGCGUGAAGGCUGAGAAAUACCCGUAUCACCUGAUCUGGAUAAUGCCAGCGUAGGGAAGUCGCA
-dbn:      ((((((((((((((((..........))))(...).).))))).(..((((((.((((......)))))).))))))))))).
-pairs_count: 28
-paired_indices: (1,82) (2,81) (3,80) (4,79) (5,78) (6,77) (7,43) (8,42) (9,41) (10,40) (11,39) (12,37) (13,30) (14,29) (15,28) (16,27) (31,35) (45,76) (48,75) (49,74) (50,73) (51,72) (52,70) (53,69) (55,68) (56,67) (57,66) (58,65)
