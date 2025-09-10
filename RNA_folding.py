@@ -1808,6 +1808,92 @@ def run_rna_folding_pipeline(seq: str, output_prefix: str = None) -> tuple:
     
     return chosen_pairs, stems, cqm, meta
 
+def save_results_to_file(seq: str, chosen_pairs: list, stems: list, meta: dict, output_prefix: str):
+    """Save RNA folding results to files in the results directory.
+    
+    Args:
+        seq (str): RNA sequence
+        chosen_pairs (list): List of selected base pairs
+        stems (list): List of stems as 4-tuples
+        meta (dict): Metadata from the model
+        output_prefix (str): Prefix for output files
+    """
+    import json
+    import os
+    
+    # Create results directory if it doesn't exist
+    results_dir = join(dirname(__file__), 'results')
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+        print(f"Created results directory: {results_dir}")
+    
+    # Save sequence
+    seq_file = join(results_dir, f"{output_prefix}_sequence.txt")
+    with open(seq_file, 'w') as f:
+        f.write(f"Sequence: {seq}\n")
+        f.write(f"Length: {len(seq)}\n")
+    
+    # Save base pairs
+    pairs_file = join(results_dir, f"{output_prefix}_base_pairs.txt")
+    with open(pairs_file, 'w') as f:
+        f.write(f"Number of base pairs: {len(chosen_pairs)}\n")
+        f.write("Base pairs (i, j):\n")
+        for pair in chosen_pairs:
+            f.write(f"  {pair}\n")
+    
+    # Save stems
+    stems_file = join(results_dir, f"{output_prefix}_stems.txt")
+    with open(stems_file, 'w') as f:
+        f.write(f"Number of stems: {len(stems)}\n")
+        f.write("Stems (i_start, i_end, j_start, j_end):\n")
+        for stem in stems:
+            f.write(f"  {stem}\n")
+    
+    # Save metadata as JSON
+    meta_file = join(results_dir, f"{output_prefix}_metadata.json")
+    with open(meta_file, 'w') as f:
+        # Convert any non-serializable objects to strings
+        serializable_meta = {
+            "candidates_count": len(meta.get("candidates", [])),
+            "is_noncanonical_count": sum(meta.get("is_noncanonical", {}).values()),
+            "notes": meta.get("notes", {}),
+            "sequence_length": len(seq),
+            "base_pairs_count": len(chosen_pairs),
+            "stems_count": len(stems)
+        }
+        json.dump(serializable_meta, f, indent=2)
+    
+    # Save summary
+    summary_file = join(results_dir, f"{output_prefix}_summary.txt")
+    with open(summary_file, 'w') as f:
+        f.write(f"RNA Folding Results Summary\n")
+        f.write(f"===========================\n\n")
+        f.write(f"Sequence: {seq}\n")
+        f.write(f"Length: {len(seq)} nucleotides\n\n")
+        f.write(f"Results:\n")
+        f.write(f"  - Base pairs found: {len(chosen_pairs)}\n")
+        f.write(f"  - Stems formed: {len(stems)}\n")
+        f.write(f"  - Candidate pairs considered: {len(meta.get('candidates', []))}\n")
+        f.write(f"  - Noncanonical pairs: {sum(meta.get('is_noncanonical', {}).values())}\n\n")
+        
+        if chosen_pairs:
+            f.write(f"Base pairs:\n")
+            for pair in chosen_pairs:
+                f.write(f"  {pair}\n")
+            f.write(f"\n")
+        
+        if stems:
+            f.write(f"Stems:\n")
+            for stem in stems:
+                f.write(f"  {stem}\n")
+    
+    print(f"Results saved to {results_dir}/")
+    print(f"  - {output_prefix}_sequence.txt")
+    print(f"  - {output_prefix}_base_pairs.txt") 
+    print(f"  - {output_prefix}_stems.txt")
+    print(f"  - {output_prefix}_metadata.json")
+    print(f"  - {output_prefix}_summary.txt")
+
 def process_sequence_list(list_file: str):
     """Process multiple RNA sequences from a list file.
     
@@ -1832,6 +1918,9 @@ def process_sequence_list(list_file: str):
             
             # Run pipeline
             chosen_pairs, stems, cqm, meta = run_rna_folding_pipeline(seq, f"{filename}_result")
+            
+            # Save results to files
+            save_results_to_file(seq, chosen_pairs, stems, meta, filename)
             
             print(f"Found {len(chosen_pairs)} base pairs")
             print(f"Grouped into {len(stems)} stems")

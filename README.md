@@ -119,6 +119,10 @@ pip install -r requirements.txt
 4. Run the code
 ```python RNA_folding.py```
 
+5. Check the results
+
+The plot is saved in the plots/ directory.
+The result is saved in the results/ directory.
 
 
 ### Bibliography
