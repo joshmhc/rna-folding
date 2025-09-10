@@ -107,7 +107,7 @@ Sum of energetic terms (kcal/mol):
 
 # How to run
 
-1. Setup API configuration
+1. Setup DWave-OCEAN API configuration
 2. Download requirements
 ```code
 pip install -r requirements.txt

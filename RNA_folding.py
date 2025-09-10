@@ -26,6 +26,8 @@ import numpy as np
 import networkx as nx
 import dimod
 import math
+import datetime
+
 from typing import Optional
 from dwave.system import LeapHybridCQMSampler
 try:
@@ -1736,16 +1738,31 @@ def _symmetrize_stacks(base_table):
 
 STACKS = _symmetrize_stacks({**TURNER_WC_STACKS, **TURNER_GU_STACKS})
 
+import math
+
 def hairpin_T04(L: int) -> float:
-    """Coarse ΔG°37(L) penalty (kcal/mol) for hairpin closure. Tweak as you wish."""
+    """Turner 2004 ΔG°37 hairpin initiation penalty (kcal/mol)."""
     if L < 3:
-        return 1e6  # forbid impossible/very tight loops
-    # short loops: stronger penalties
-    table = {3: 5.2, 4: 4.9, 5: 4.5, 6: 4.2}
+        return 1e6  # forbid <3-nt hairpins
+
+    # Turner 2004 experimental table (n = 3..9)
+    table = {
+        3: 5.4,
+        4: 5.6,
+        5: 5.7,
+        6: 5.4,
+        7: 6.0,
+        8: 5.5,
+        9: 6.4,
+    }
     if L in table:
         return table[L]
-    # longer loops: gentle decay; keeps a baseline cost
-    return 4.0 + 0.2 * math.log(L / 8.0)
+
+    # Extrapolation for n > 9:
+    # ΔG°37(init)(n) = ΔG°37(init)(9) + 1.75*R*T * ln(n/9)
+    RT = 0.616  # kcal/mol at 37 °C
+    return table[9] + 1.75 * RT * math.log(L / 9.0)
+
 
 # ---- I/O helper ----------------------------------------------------------
 def load_sequence_from_sequences_txt(file_name: str) -> str:
@@ -1780,23 +1797,50 @@ def run_rna_folding_pipeline(seq: str, output_prefix: str = None) -> tuple:
         output_prefix (str): Prefix for output files (default: sequence name)
         
     Returns:
-        tuple: (chosen_pairs, stems, cqm, meta)
+        tuple: (chosen_pairs, stems, cqm, meta, timestamp)
     """
+    # Adjust parameters based on sequence length
+    n = len(seq)
+    if n < 20:
+        # Short sequence parameters (relaxed for better pair formation)
+        h0 = 1.0  # Reduced isolated pair penalty
+        au_end_pen = 0.3  # Reduced AU end penalty
+        gu_end_pen = 0.2  # Reduced GU end penalty
+        noncanon_linear_penalty = 3.0  # Standard noncanonical penalty
+        pseudoknot_soft_penalty = 1.0  # Reduced pseudoknot penalty
+        hairpin_fn = lambda L: 0.0  # No hairpin penalties for short sequences
+        print(f"Using short sequence parameters (n={n})")
+    else:
+        # Standard parameters for longer sequences
+        h0 = 1.5  # Standard isolated pair penalty
+        au_end_pen = 0.5  # Standard AU end penalty
+        gu_end_pen = 0.4  # Standard GU end penalty
+        noncanon_linear_penalty = 3.0  # Standard noncanonical penalty
+        pseudoknot_soft_penalty = 1.0  # Standard pseudoknot penalty
+        hairpin_fn = hairpin_T04  # Turner 2004 hairpin penalties
+        print(f"Using standard parameters (n={n})")
+    
     cqm, meta = build_cqm_secondary_turner(
         seq,
         Lmin=3,
         forbid_pseudoknots=False,
-        h0=0.1,
-        hairpin_fn=lambda L: 0.0,
-        au_end_pen=0.0,
-        gu_end_pen=0.0,
+        h0=h0,
+        hairpin_fn=hairpin_fn,
+        au_end_pen=au_end_pen,
+        gu_end_pen=gu_end_pen,
         allow_noncanonical=True,
-        noncanon_linear_penalty=0.1,
-        pseudoknot_soft_penalty=0.1,
+        noncanon_linear_penalty=noncanon_linear_penalty,
+        pseudoknot_soft_penalty=pseudoknot_soft_penalty,
     )
 
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
     sampler = LeapHybridCQMSampler()
-    sampleset = sampler.sample_cqm(cqm)
+    sampleset = sampler.sample_cqm(
+        cqm, 
+        label=f"RNA_folding_{output_prefix or 'default'}_{timestamp}",
+        time_limit=30  # 30 seconds max
+    )
     sampleset.resolve()
     best = sampleset.filter(lambda s: s.is_feasible).first or sampleset.first
 
@@ -1804,12 +1848,12 @@ def run_rna_folding_pipeline(seq: str, output_prefix: str = None) -> tuple:
     stems = pairs_to_stems(chosen_pairs)
     
     if output_prefix:
-        make_plot(seq, stems, output_prefix)
+        make_plot(seq, stems, f"{output_prefix}_{timestamp}")
     
-    return chosen_pairs, stems, cqm, meta
+    return chosen_pairs, stems, cqm, meta, timestamp
 
 def save_results_to_file(seq: str, chosen_pairs: list, stems: list, meta: dict, output_prefix: str):
-    """Save RNA folding results to files in the results directory.
+    """Save RNA folding results to files in a timestamped subdirectory.
     
     Args:
         seq (str): RNA sequence
@@ -1821,8 +1865,11 @@ def save_results_to_file(seq: str, chosen_pairs: list, stems: list, meta: dict, 
     import json
     import os
     
-    # Create results directory if it doesn't exist
-    results_dir = join(dirname(__file__), 'results')
+    # Create timestamp for this run
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Create timestamped subdirectory
+    results_dir = join(dirname(__file__), 'results', f"{output_prefix}_{timestamp}")
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
         print(f"Created results directory: {results_dir}")
@@ -1910,7 +1957,7 @@ def process_sequence_list(list_file: str):
             print(f"Sequence: {seq}")
             
             # Run pipeline
-            chosen_pairs, stems, cqm, meta = run_rna_folding_pipeline(seq, f"{filename}_result")
+            chosen_pairs, stems, cqm, meta, timestamp = run_rna_folding_pipeline(seq, f"{filename}_result")
             
             # Save results to files
             save_results_to_file(seq, chosen_pairs, stems, meta, filename)
@@ -2000,10 +2047,17 @@ def build_cqm_secondary_turner(
 
     # 2b) Nearest-neighbor stacking bonuses (quadratic)
     for (i, j) in P:
+        # Inner neighbor (i+1, j-1)
         inner = (i + 1, j - 1)
         if inner in Pset:
-            dG = stack_dG(seq[i], seq[i+1], seq[j], seq[j-1])  # negative = stabilizing
+            dG = stack_dG(seq[i], seq[i+1], seq[j], seq[j-1])
             add_quad((i, j), inner, dG)
+        
+        # Outer neighbor (i-1, j+1)
+        outer = (i - 1, j + 1)
+        if outer in Pset:
+            dG = stack_dG(seq[i-1], seq[i], seq[j+1], seq[j])
+            add_quad((i, j), outer, dG)
 
     # 2c) Hairpin end penalty via cancellation with inner neighbor
     for (i, j) in P:
@@ -2049,6 +2103,7 @@ def build_cqm_secondary_turner(
     # 3) Promote to CQM and add hard constraints
     cqm = dimod.CQM()
     cqm.set_objective(bqm)
+    cqm.label = f"RNA_secondary_structure_{seq}"
 
     # 3a) Non-overlap: each nucleotide pairs at most once
     for t in range(n):
@@ -2126,7 +2181,7 @@ def main(path, verbose, min_stem, min_loop, c):
     seq = load_sequence_from_sequences_txt(f"{PBD_ID}.txt")
     print(f"Sequence: {seq} (length: {len(seq)})")
     
-    chosen_pairs, stems, cqm, meta = run_rna_folding_pipeline(seq, f"{PBD_ID}_result")
+    chosen_pairs, stems, cqm, meta, timestamp = run_rna_folding_pipeline(seq, f"{PBD_ID}_result")
     
     # Save results to files
     save_results_to_file(seq, chosen_pairs, stems, meta, PBD_ID)
