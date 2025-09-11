@@ -1806,7 +1806,7 @@ def run_rna_folding_pipeline(seq: str, output_prefix: str = None) -> tuple:
         h0 = 1.0  # Reduced isolated pair penalty
         au_end_pen = 0.3  # Reduced AU end penalty
         gu_end_pen = 0.2  # Reduced GU end penalty
-        noncanon_linear_penalty = 3.0  # Standard noncanonical penalty
+        noncanon_linear_penalty = 2.5  # Standard noncanonical penalty
         pseudoknot_soft_penalty = 1.0  # Reduced pseudoknot penalty
         hairpin_fn = lambda L: 0.0  # No hairpin penalties for short sequences
         print(f"Using short sequence parameters (n={n})")
@@ -1815,7 +1815,7 @@ def run_rna_folding_pipeline(seq: str, output_prefix: str = None) -> tuple:
         h0 = 1.5  # Standard isolated pair penalty
         au_end_pen = 0.5  # Standard AU end penalty
         gu_end_pen = 0.4  # Standard GU end penalty
-        noncanon_linear_penalty = 3.0  # Standard noncanonical penalty
+        noncanon_linear_penalty = 2.5  # Standard noncanonical penalty
         pseudoknot_soft_penalty = 1.0  # Standard pseudoknot penalty
         hairpin_fn = hairpin_T04  # Turner 2004 hairpin penalties
         print(f"Using standard parameters (n={n})")
@@ -1877,18 +1877,17 @@ def save_results_to_file(seq: str, chosen_pairs: list, stems: list, meta: dict, 
     # Save base pairs
     pairs_file = join(results_dir, f"{output_prefix}_base_pairs.txt")
     with open(pairs_file, 'w') as f:
-        f.write(f"Number of base pairs: {len(chosen_pairs)}\n")
-        f.write("Base pairs (i, j):\n")
+        f.write(f"{seq}\n")
         for pair in chosen_pairs:
-            f.write(f"  {pair}\n")
+            f.write(f"{pair}\n")
     
     # Save stems
     stems_file = join(results_dir, f"{output_prefix}_stems.txt")
     with open(stems_file, 'w') as f:
-        f.write(f"Number of stems: {len(stems)}\n")
-        f.write("Stems (i_start, i_end, j_start, j_end):\n")
+        f.write(f"{seq}\n")
+        f.write(f"{len(stems)}\n")
         for stem in stems:
-            f.write(f"  {stem}\n")
+            f.write(f"{stem}\n")
     
     # Save metadata as JSON
     meta_file = join(results_dir, f"{output_prefix}_metadata.json")
@@ -2177,9 +2176,9 @@ def main(path, verbose, min_stem, min_loop, c):
     """
     
     # Process a single sequence (one by one)
-    PBD_ID = "1LU3"
+    PBD_ID = "7EOG"
     seq = load_sequence_from_sequences_txt(f"{PBD_ID}.txt")
-    print(f"Sequence: {seq} (length: {len(seq)})")
+    print(f"PBD: {PBD_ID}, Sequence: {seq}")
     
     chosen_pairs, stems, cqm, meta, timestamp = run_rna_folding_pipeline(seq, f"{PBD_ID}_result")
     
